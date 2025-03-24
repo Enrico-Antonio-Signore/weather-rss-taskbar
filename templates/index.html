@@ -3,94 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo Live</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Meteo RSS</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-            color: white;
             text-align: center;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: white;
             margin: 0;
             padding: 0;
         }
-        .container {
-            padding: 20px;
-        }
-        .weather-card {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px auto;
-            width: 90%;
+        #weather-container {
+            margin: 20px auto;
             max-width: 400px;
-            backdrop-filter: blur(10px);
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 24px;
         }
         .forecast {
             display: flex;
-            overflow-x: auto;
-            padding: 10px;
+            flex-direction: column;
+            align-items: center;
         }
-        .forecast-item {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+        .day {
+            background: rgba(255, 255, 255, 0.3);
+            margin: 10px;
             padding: 10px;
-            margin: 5px;
-            min-width: 100px;
+            border-radius: 8px;
+            width: 90%;
             text-align: center;
+            font-size: 18px;
         }
-        .icon {
-            font-size: 30px;
+        .loading {
+            font-size: 16px;
+            margin-top: 10px;
+            color: yellow;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Meteo Live</h1>
-        <div class="weather-card" id="current-weather">
-            <h2>Caricamento...</h2>
-            <p>Attiva la geolocalizzazione per vedere il meteo.</p>
-        </div>
-        <h3>Previsioni settimanali</h3>
-        <div class="forecast" id="weekly-forecast">
-            <p>Caricamento...</p>
-        </div>
+    <h1>🌤️ Previsioni Meteo</h1>
+    <div id="weather-container">
+        <p class="loading">Caricamento dati...</p>
+        <div id="weather-display"></div>
+        <div class="forecast" id="forecast-container"></div>
     </div>
 
     <script>
         function fetchWeather(lat, lon) {
             fetch(`/weather_rss?lat=${lat}&lon=${lon}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("current-weather").innerHTML = `
-                        <h2>${data.city}</h2>
-                        <p class="icon">${data.icon}</p>
-                        <p>${data.temperature}°C - ${data.condition}</p>
-                    `;
-                    
-                    const forecastContainer = document.getElementById("weekly-forecast");
-                    forecastContainer.innerHTML = "";
-                    data.forecast.forEach(day => {
-                        forecastContainer.innerHTML += `
-                            <div class="forecast-item">
-                                <p>${day.day}</p>
-                                <p class="icon">${day.icon}</p>
-                                <p>${day.temp}°C</p>
-                            </div>
-                        `;
-                    });
+                .then(response => response.text()) 
+                .then(str => {
+                    console.log("Dati ricevuti:", str);
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(str, "application/xml");
+
+                    const title = xml.querySelector("title")?.textContent || "Meteo non disponibile";
+                    const description = xml.querySelector("description")?.textContent || "Errore nel recupero dati";
+
+                    document.querySelector(".loading").style.display = "none";
+                    document.getElementById("weather-display").innerHTML = `<h2>${title}</h2><p>${description}</p>`;
                 })
-                .catch(err => console.error("Errore nel caricamento meteo", err));
+                .catch(error => {
+                    console.error("Errore nel caricamento meteo:", error);
+                    document.getElementById("weather-display").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
+                });
         }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => fetchWeather(position.coords.latitude, position.coords.longitude),
-                () => fetchWeather(44.0, 12.0) // Fallback su posizione generica
-            );
-        } else {
-            fetchWeather(44.0, 12.0);
+        function getLocationAndFetchWeather() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        fetchWeather(lat, lon);
+                    },
+                    error => {
+                        console.error("Errore nella geolocalizzazione:", error);
+                        fetchWeather(44.0647, 12.4692); // Posizione di default
+                    }
+                );
+            } else {
+                fetchWeather(44.0647, 12.4692);
+            }
         }
+
+        getLocationAndFetchWeather();
     </script>
 </body>
 </html>
