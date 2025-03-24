@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meteo Live</title>
+</head>
+<body>
+    <h1>Caricamento meteo in corso...</h1>
+    <div id="weather-result">
+        <p>Attivare la geolocalizzazione per vedere il meteo della tua posizione.</p>
+    </div>
+
+    <script>
+        function loadWeather(lat, lon) {
+            fetch(`/weather_rss?lat=${lat}&lon=${lon}`)
+                .then(response => response.text())
+                .then(xml => {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xml, "text/xml");
+                    const title = xmlDoc.querySelector("title").textContent;
+                    const description = xmlDoc.querySelector("description").textContent;
+                    
+                    document.getElementById("weather-result").innerHTML = `
+                        <h2>${title}</h2>
+                        <pre>${description.replace(/\n/g, '<br>')}</pre>
+                    `;
+                });
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    loadWeather(position.coords.latitude, position.coords.longitude);
+                },
+                error => {
+                    console.error("Errore geolocalizzazione:", error);
+                    loadWeather();  // Fallback a geolocalizzazione via IP
+                }
+            );
+        } else {
+            loadWeather();  // Fallback a geolocalizzazione via IP
+        }
+    </script>
+</body>
+</html>
