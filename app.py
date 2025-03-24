@@ -7,9 +7,9 @@ OPENWEATHER_API_KEY = "c261fa04a85ef65367fee878d0313041"
 
 @app.route('/weather_rss')
 def weather_rss():
-    # Ottieni posizione approssimativa (esempio: Roma)
-    # (Puoi migliorarlo con la geolocalizzazione via IP in produzione)
-    lat, lon = "41.9028", "12.4964"  # Esempio: coordinate di Roma
+    # Ottieni posizione approssimativa con ipapi.co
+    location = requests.get('https://ipapi.co/json/').json()
+    lat, lon = location['latitude'], location['longitude']
 
     # Chiama l'API di OpenWeather
     weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric&lang=it"
