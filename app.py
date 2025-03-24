@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, render_template
+from flask import Flask, Response, request, render_template, jsonify
 import requests
 import xml.etree.ElementTree as ET
 import os
@@ -62,6 +62,38 @@ def weather_rss():
 
     xml_str = ET.tostring(rss, encoding='unicode', method='xml')
     return Response(f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}', mimetype="application/xml")
+
+@app.route('/weather_forecast')
+def weather_forecast():
+    try:
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+
+        if not lat or not lon:
+            location_data = requests.get('https://ipapi.co/json/', timeout=3).json()
+            lat, lon = str(location_data['latitude']), str(location_data['longitude'])
+
+        forecast_url = f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude=minutely,hourly&appid={OPENWEATHER_API_KEY}&units=metric&lang=it"
+        forecast_data = requests.get(forecast_url, timeout=3).json()
+
+        daily_forecast = []
+        for day in forecast_data['daily'][:5]:  # Prendiamo solo i primi 5 giorni
+            daily_forecast.append({
+                'date': day['dt'],
+                'temp_min': round_to_half(day['temp']['min']),
+                'temp_max': round_to_half(day['temp']['max']),
+                'condition': day['weather'][0]['description'].capitalize(),
+                'uv_index': day['uvi']
+            })
+
+        return {
+            'city': forecast_data.get('timezone', 'Posizione sconosciuta').split('/')[1].replace('_', ' '),
+            'forecast': daily_forecast
+        }
+
+    except Exception as e:
+        print("Errore:", e)
+        return {'error': 'Impossibile recuperare i dati meteo.'}, 500
 
 @app.route('/')
 def homepage():
