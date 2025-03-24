@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import os
 
 app = Flask(__name__)
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")  # Chiave API OpenWeatherMap
 
 def get_emoji(weather_main):
     weather_icons = {
@@ -29,10 +29,11 @@ def weather_rss():
         lon = request.args.get('lon')
         
         if not lat or not lon:
-            location_data = requests.get('https://ipapi.co/json/', timeout=3).json()
-            lat, lon = str(location_data['latitude']), str(location_data['longitude'])
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
+            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            lat, lon = loc.split(',')
             city = location_data.get('city', 'Posizione sconosciuta')
-            country = location_data.get('country_name', '')
+            country = location_data.get('country', '')
         else:
             reverse_geo_url = f"http://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={lon}&limit=1&appid={OPENWEATHER_API_KEY}"
             geo_data = requests.get(reverse_geo_url, timeout=3).json()
@@ -48,6 +49,7 @@ def weather_rss():
         icon = get_emoji(weather_data['weather'][0]['main'])
 
     except Exception as e:
+        print("Errore in /weather_rss:", str(e))  # Log dell'errore
         city = "Roma"
         temp_str = "N/D"
         condition = "Dati non disponibili"
@@ -70,11 +72,20 @@ def weather_forecast():
         lon = request.args.get('lon')
 
         if not lat or not lon:
-            location_data = requests.get('https://ipapi.co/json/', timeout=3).json()
-            lat, lon = str(location_data['latitude']), str(location_data['longitude'])
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
+            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            lat, lon = loc.split(',')
 
         forecast_url = f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude=minutely,hourly&appid={OPENWEATHER_API_KEY}&units=metric&lang=it"
-        forecast_data = requests.get(forecast_url, timeout=3).json()
+        print(f"URL richiesta: {forecast_url}")  # Log dell'URL della richiesta
+
+        response = requests.get(forecast_url, timeout=10)  # Aumenta il timeout a 10 secondi
+        print(f"Risposta API: {response.status_code}, {response.text}")  # Log della risposta
+
+        if response.status_code != 200:
+            return {'error': 'Errore nella richiesta API'}, 500
+
+        forecast_data = response.json()
 
         daily_forecast = []
         for day in forecast_data['daily'][:5]:  # Prendiamo solo i primi 5 giorni
@@ -92,7 +103,7 @@ def weather_forecast():
         }
 
     except Exception as e:
-        print("Errore:", e)
+        print("Errore in /weather_forecast:", str(e))  # Log dell'errore completo
         return {'error': 'Impossibile recuperare i dati meteo.'}, 500
 
 @app.route('/')
