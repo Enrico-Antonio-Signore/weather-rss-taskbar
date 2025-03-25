@@ -181,24 +181,26 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            position: relative;
         }
 
         .card-title {
             font-size: 20px;
             font-weight: 700;
+        }
+
+        .card-icon {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .card-title .day-emoji {
-            font-size: 24px;
+        .card-icon img {
+            width: 40px;
+            height: 40px;
         }
 
-        .card-icon img {
-            width: 50px;
-            height: 50px;
+        .weather-emoji {
+            font-size: 24px;
         }
 
         .card-info {
@@ -257,7 +259,6 @@
             font-size: 18px;
         }
 
-        /* Dark Mode Toggle */
         .toggle-container {
             display: flex;
             align-items: center;
@@ -350,6 +351,21 @@
             100% { transform: rotate(360deg); }
         }
 
+        .error-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .retry-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
         @media (max-width: 768px) {
             .week-summary {
                 grid-template-columns: repeat(4, 1fr);
@@ -430,26 +446,11 @@
             return str.replace(/\b\w/g, char => char.toUpperCase());
         }
 
-        // Funzione per ottenere il nome del giorno con emoji
-        function getDayWithEmoji(dateStr) {
+        // Funzione per ottenere il nome del giorno
+        function getDayName(dateStr) {
             const date = new Date(dateStr);
             const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-            const dayName = days[date.getDay()];
-            
-            const dayEmojis = {
-                'Domenica': '🌞',
-                'Lunedì': '😊',
-                'Martedì': '🔥',
-                'Mercoledì': '🌊',
-                'Giovedì': '⛈️',
-                'Venerdì': '🍹',
-                'Sabato': '🎉'
-            };
-            
-            return {
-                name: dayName,
-                emoji: dayEmojis[dayName] || '📅'
-            };
+            return days[date.getDay()];
         }
 
         // Funzione per aggiornare l'orologio in formato 24H
@@ -462,22 +463,13 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Funzione per ottenere emoji meteo
+        // Funzione per ottenere emoji basate sulle condizioni meteo
         function getWeatherEmoji(condition) {
             const conditionLower = condition.toLowerCase();
             const weatherIcons = {
-                'clear': '☀️',
-                'sunny': '☀️',
-                'cloud': '☁️',
-                'clouds': '☁️',
-                'rain': '🌧️',
-                'thunder': '⛈️',
-                'snow': '❄️',
-                'mist': '🌫️',
-                'fog': '🌁',
-                'drizzle': '🌦️',
-                'shower': '🌧️',
-                'overcast': '☁️'
+                'clear': '☀️', 'sunny': '☀️', 'cloud': '☁️', 'clouds': '☁️',
+                'rain': '🌧️', 'thunder': '⛈️', 'snow': '❄️', 'mist': '🌫️',
+                'fog': '🌁', 'drizzle': '🌦️', 'shower': '🌧️', 'overcast': '☁️'
             };
             
             const key = Object.keys(weatherIcons).find(key => conditionLower.includes(key));
@@ -490,13 +482,13 @@
             weekSummaryContainer.innerHTML = '';
             
             forecastData.forEach(day => {
-                const dayInfo = getDayWithEmoji(day.date);
+                const dayName = getDayName(day.date);
                 const weatherEmoji = getWeatherEmoji(day.condition);
                 
                 const dayElement = document.createElement('div');
                 dayElement.className = 'day-summary';
                 dayElement.innerHTML = `
-                    <div class="day-name">${dayInfo.name.substring(0, 3)}</div>
+                    <div class="day-name">${dayName.substring(0, 3)}</div>
                     <div class="day-weather">${weatherEmoji}</div>
                     <div class="day-temp">
                         <span class="max-temp">${Math.round(day.temp_max)}°</span>
@@ -515,8 +507,8 @@
 
             forecastData.forEach(day => {
                 const date = new Date(day.date);
-                const dayInfo = getDayWithEmoji(day.date);
-                const formattedDate = capitalizeWords(dayInfo.name) + ' ' + 
+                const dayName = getDayName(day.date);
+                const formattedDate = capitalizeWords(dayName) + ' ' + 
                                       date.getDate() + ' ' + 
                                       capitalizeWords(date.toLocaleDateString('it-IT', { month: 'long' }));
                 
@@ -527,12 +519,11 @@
                 card.innerHTML = `
                     <div class="card-header">
                         <div class="card-title">
-                            <span class="day-emoji">${dayInfo.emoji}</span>
                             ${formattedDate}
                         </div>
                         <div class="card-icon">
                             <img src="https:${day.icon}" alt="${day.condition}">
-                            <div style="font-size: 24px; margin-top: 5px;">${weatherEmoji}</div>
+                            <span class="weather-emoji">${weatherEmoji}</span>
                         </div>
                     </div>
                     <div class="card-info">
@@ -560,7 +551,6 @@
                 `;
                 container.appendChild(card);
 
-                // Grafico Temperatura
                 createChart(`temp-chart-${day.date}`, day.hourly);
             });
         }
@@ -603,7 +593,6 @@
                                 color: getComputedStyle(document.body).getPropertyValue('--text-light'),
                                 maxTicksLimit: 6,
                                 callback: function(value, index) {
-                                    // Mostra solo le ore principali
                                     const hour = parseInt(this.getLabelForValue(value).split(':')[0]);
                                     return hour % 4 === 0 ? hour + ':00' : '';
                                 }
@@ -630,7 +619,6 @@
             document.body.classList.toggle('dark-mode', event.target.checked);
             localStorage.setItem('darkMode', event.target.checked);
             
-            // Aggiorna i grafici quando cambia il tema
             if (typeof Chart !== 'undefined') {
                 Chart.getRegisteredPlugins().forEach(plugin => {
                     if (plugin.id === 'chartjs-plugin-annotation') return;
@@ -645,40 +633,82 @@
             document.getElementById('darkModeToggle').checked = true;
         }
 
-        // Funzione per ottenere la posizione e caricare i dati meteo
-        function getWeatherData() {
-            fetch('/weather_forecast')
-                .then(response => {
-                    if (!response.ok) throw new Error('Errore nel caricamento dei dati');
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    
-                    // Aggiorna la località
-                    let locationText = data.city;
-                    if (data.region && data.region !== data.city) {
-                        locationText += `, ${data.region}`;
-                    }
-                    locationText += `, ${data.country}`;
-                    document.getElementById('location').textContent = locationText;
-                    
-                    // Crea le previsioni
-                    createWeeklySummary(data.forecast);
-                    createDailyForecast(data.forecast);
-                })
-                .catch(error => {
-                    console.error("Errore:", error);
-                    document.getElementById("forecast-container").innerHTML = `
-                        <div class="card">
-                            <p>Errore nel caricamento dei dati meteo: ${error.message}</p>
-                        </div>
-                    `;
-                });
+        // Funzione per ottenere la posizione
+        function getLocation() {
+            return new Promise((resolve, reject) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        position => resolve({
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        }),
+                        error => {
+                            console.error("Errore geolocalizzazione:", error);
+                            // Default: Roma
+                            resolve({ lat: 41.9028, lon: 12.4964 });
+                        }
+                    );
+                } else {
+                    console.warn("Geolocalizzazione non supportata");
+                    // Default: Roma
+                    resolve({ lat: 41.9028, lon: 12.4964 });
+                }
+            });
         }
 
-        // Avvia il caricamento dei dati
-        getWeatherData();
+        // Funzione per mostrare errore
+        function showError(message) {
+            document.getElementById("forecast-container").innerHTML = `
+                <div class="error-container">
+                    <p>${message}</p>
+                    <button class="retry-btn" onclick="loadWeatherData()">Riprova</button>
+                </div>
+            `;
+        }
+
+        // Funzione per aggiornare la località
+        function updateLocationInfo(data) {
+            let locationText = data.city;
+            if (data.region && data.region !== data.city) {
+                locationText += `, ${data.region}`;
+            }
+            locationText += `, ${data.country}`;
+            document.getElementById('location').textContent = locationText;
+        }
+
+        // Funzione principale per caricare i dati meteo
+        async function loadWeatherData() {
+            try {
+                document.getElementById("forecast-container").innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                `;
+
+                const { lat, lon } = await getLocation();
+                const response = await fetch(`/weather_forecast?lat=${lat}&lon=${lon}`);
+                
+                if (!response.ok) {
+                    throw new Error('Errore nel caricamento dei dati');
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                updateLocationInfo(data);
+                createWeeklySummary(data.forecast);
+                createDailyForecast(data.forecast);
+            } catch (error) {
+                console.error("Errore:", error);
+                showError(error.message || 'Errore sconosciuto');
+            }
+        }
+
+        // Avvia il caricamento
+        loadWeatherData();
     </script>
 </body>
 </html>
