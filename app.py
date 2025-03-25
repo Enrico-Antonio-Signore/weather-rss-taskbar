@@ -85,6 +85,14 @@ def weather_forecast():
 
         daily_forecast = []
         for day in forecast_data['forecast']['forecastday']:
+            hourly_data = []
+            for hour in day['hour']:
+                hourly_data.append({
+                    'time': hour['time'].split(' ')[1],  # Estrai solo l'ora (es. "14:00")
+                    'temp': hour['temp_c'],
+                    'condition': hour['condition']['text'],
+                    'icon': hour['condition']['icon']
+                })
             daily_forecast.append({
                 'date': day['date'],
                 'temp_min': day['day']['mintemp_c'],
@@ -94,7 +102,8 @@ def weather_forecast():
                 'sunrise': day['astro']['sunrise'],
                 'sunset': day['astro']['sunset'],
                 'humidity': day['day']['avghumidity'],
-                'wind': day['day']['maxwind_kph']
+                'wind': day['day']['maxwind_kph'],
+                'hourly': hourly_data
             })
 
         return {
