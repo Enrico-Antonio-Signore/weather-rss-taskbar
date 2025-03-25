@@ -55,6 +55,7 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
+            gap: 15px;
         }
 
         header h1 {
@@ -100,7 +101,7 @@
 
         .week-summary {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 10px;
             padding: 10px 0;
         }
@@ -256,11 +257,11 @@
             font-size: 18px;
         }
 
-        /* Dark Mode Toggle Styling */
+        /* Dark Mode Toggle */
         .toggle-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .toggle-label {
@@ -321,7 +322,6 @@
             left: 8px;
             font-size: 16px;
             z-index: 1;
-            transition: all 0.3s ease;
         }
 
         input:checked + .slider::after {
@@ -359,6 +359,7 @@
             
             header {
                 grid-template-columns: auto 1fr auto;
+                padding: 15px;
             }
             
             .header-center {
@@ -378,6 +379,11 @@
             
             .additional-info {
                 grid-template-columns: 1fr;
+            }
+            
+            .header-right {
+                flex-direction: column;
+                gap: 5px;
             }
         }
     </style>
@@ -405,7 +411,9 @@
     <div class="summary-container" id="summary-container">
         <h2>Riepilogo Settimanale</h2>
         <div class="week-summary" id="week-summary">
-            <!-- I giorni verranno aggiunti qui dinamicamente -->
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
         </div>
     </div>
 
@@ -454,15 +462,16 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Funzione per ottenere emoji basate sulle condizioni meteo
+        // Funzione per ottenere emoji meteo
         function getWeatherEmoji(condition) {
+            const conditionLower = condition.toLowerCase();
             const weatherIcons = {
                 'clear': '☀️',
                 'sunny': '☀️',
                 'cloud': '☁️',
                 'clouds': '☁️',
                 'rain': '🌧️',
-                'thunderstorm': '⛈️',
+                'thunder': '⛈️',
                 'snow': '❄️',
                 'mist': '🌫️',
                 'fog': '🌁',
@@ -471,8 +480,7 @@
                 'overcast': '☁️'
             };
             
-            const lowerCondition = condition.toLowerCase();
-            const key = Object.keys(weatherIcons).find(key => lowerCondition.includes(key));
+            const key = Object.keys(weatherIcons).find(key => conditionLower.includes(key));
             return weatherIcons[key] || '🌡️';
         }
 
@@ -552,7 +560,7 @@
                 `;
                 container.appendChild(card);
 
-                // Grafico Temperatura con andamento più realistico
+                // Grafico Temperatura
                 createChart(`temp-chart-${day.date}`, day.hourly);
             });
         }
@@ -560,8 +568,6 @@
         // Funzione per creare il grafico della temperatura
         function createChart(elementId, hourlyData) {
             const ctx = document.getElementById(elementId);
-            
-            // Estrai ore e temperature
             const labels = hourlyData.map(hour => hour.time);
             const temps = hourlyData.map(hour => hour.temp);
             
@@ -622,6 +628,8 @@
         // Gestione del Dark Mode
         document.getElementById('darkModeToggle').addEventListener('change', (event) => {
             document.body.classList.toggle('dark-mode', event.target.checked);
+            localStorage.setItem('darkMode', event.target.checked);
+            
             // Aggiorna i grafici quando cambia il tema
             if (typeof Chart !== 'undefined') {
                 Chart.getRegisteredPlugins().forEach(plugin => {
@@ -631,98 +639,46 @@
             }
         });
 
-        // Funzione per ottenere la posizione e la località
-        function getLocation() {
-            return new Promise((resolve, reject) => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        position => {
-                            const lat = position.coords.latitude;
-                            const lon = position.coords.longitude;
-                            
-                            // Simulazione nome città (nella realtà dovresti usare una API di geocoding)
-                            const cities = ['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Firenze', 'Bologna'];
-                            const city = cities[Math.floor(Math.random() * cities.length)];
-                            
-                            resolve({ lat, lon, city });
-                        },
-                        error => {
-                            console.error("Errore nella geolocalizzazione:", error);
-                            resolve({ lat: 44.0647, lon: 12.4692, city: 'Rimini' }); // Default
-                        }
-                    );
-                } else {
-                    resolve({ lat: 44.0647, lon: 12.4692, city: 'Rimini' }); // Default
-                }
-            });
+        // Carica lo stato del dark mode
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkModeToggle').checked = true;
         }
 
-        // Funzione per simulare il fetch dei dati (da sostituire con chiamata API reale)
-        function fetchWeatherData(lat, lon) {
-            // Simulazione dati per demo con andamento più realistico
-            const now = new Date();
-            const forecast = {
-                forecast: Array.from({length: 7}, (_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() + i);
-                    
-                    // Temperatura base con variazione giornaliera
-                    const baseTemp = 18 + Math.sin(i * 0.5) * 5;
-                    const tempMin = Math.round(baseTemp - 3 - Math.random() * 2);
-                    const tempMax = Math.round(baseTemp + 3 + Math.random() * 2);
-                    
-                    // Condizioni meteo variabili
-                    const conditions = ["Sunny", "Partly Cloudy", "Cloudy", "Rain", "Thunderstorm", "Clear", "Drizzle"];
-                    const condition = conditions[(i + Math.floor(i/2)) % conditions.length];
-                    
-                    // Genera dati orari realistici
-                    const hourly = Array.from({length: 24}, (_, h) => {
-                        // Andamento sinusoidale della temperatura durante il giorno
-                        const hourTemp = tempMin + (tempMax - tempMin) * (0.5 + 0.5 * Math.sin((h - 6) * Math.PI / 12));
-                        // Aggiungi una piccola variazione casuale
-                        const finalTemp = hourTemp + (Math.random() * 2 - 1);
-                        
-                        return {
-                            time: `${h}:00`,
-                            temp: Math.round(finalTemp * 10) / 10,
-                            precip: condition === 'Rain' || condition === 'Thunderstorm' ? 
-                                   (h > 12 && h < 20 ? Math.random() * 3 : 0) : 0
-                        };
-                    });
-                    
-                    return {
-                        date: date.toISOString().split('T')[0],
-                        temp_min: tempMin,
-                        temp_max: tempMax,
-                        condition: condition,
-                        icon: `//cdn.weatherapi.com/weather/64x64/day/${113 + i}.png`,
-                        humidity: 60 + (i * 3),
-                        wind: 10 + i,
-                        sunrise: `0${6 + i % 2}:${30 - (i * 2) % 30}`,
-                        sunset: `${20 + i % 2}:${15 + (i * 3) % 45}`,
-                        hourly: hourly
-                    };
+        // Funzione per ottenere la posizione e caricare i dati meteo
+        function getWeatherData() {
+            fetch('/weather_forecast')
+                .then(response => {
+                    if (!response.ok) throw new Error('Errore nel caricamento dei dati');
+                    return response.json();
                 })
-            };
-            
-            return Promise.resolve(forecast);
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    
+                    // Aggiorna la località
+                    let locationText = data.city;
+                    if (data.region && data.region !== data.city) {
+                        locationText += `, ${data.region}`;
+                    }
+                    locationText += `, ${data.country}`;
+                    document.getElementById('location').textContent = locationText;
+                    
+                    // Crea le previsioni
+                    createWeeklySummary(data.forecast);
+                    createDailyForecast(data.forecast);
+                })
+                .catch(error => {
+                    console.error("Errore:", error);
+                    document.getElementById("forecast-container").innerHTML = `
+                        <div class="card">
+                            <p>Errore nel caricamento dei dati meteo: ${error.message}</p>
+                        </div>
+                    `;
+                });
         }
 
-        // Caricamento iniziale dei dati
-        getLocation()
-            .then(location => {
-                document.getElementById('location').textContent = `Località: ${location.city}`;
-                return fetchWeatherData(location.lat, location.lon);
-            })
-            .then(data => {
-                createWeeklySummary(data.forecast);
-                createDailyForecast(data.forecast);
-            })
-            .catch(error => {
-                console.error("Errore nel caricamento delle previsioni:", error);
-                document.getElementById("forecast-container").innerHTML = 
-                    `<div class="card"><p>Errore nel caricamento dei dati meteo. ${error.message}</p></div>`;
-            });
+        // Avvia il caricamento dei dati
+        getWeatherData();
     </script>
 </body>
 </html>
