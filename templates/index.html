@@ -5,25 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meteo RSS</title>
     <style>
+        /* Flat UI Design */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             text-align: center;
-            background: linear-gradient(to right, #f79d00, #64b5f6);
-            color: white;
+            background: #f3f4f6; /* Grigio chiaro */
+            color: #333; /* Testo scuro */
             margin: 0;
             padding: 0;
+        }
+        h1 {
+            font-size: 28px;
+            color: #2c3e50; /* Blu scuro */
+            margin-bottom: 20px;
         }
         #weather-container {
             margin: 20px auto;
             max-width: 600px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.2);
+            background: #ffffff; /* Bianco */
             border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-        }
-        h1 {
-            font-size: 28px;
-            margin-bottom: 20px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Ombra leggera */
         }
         .forecast {
             display: flex;
@@ -32,30 +34,42 @@
             gap: 10px;
         }
         .day {
-            background: rgba(255, 255, 255, 0.3);
+            background: #ecf0f1; /* Grigio chiarissimo */
             padding: 15px;
             border-radius: 8px;
             width: calc(50% - 20px);
             text-align: left;
             font-size: 16px;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .day:hover {
             transform: scale(1.05);
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.15); /* Ombra più evidente */
         }
         .loading {
             font-size: 16px;
             margin-top: 10px;
-            color: yellow;
+            color: #f1c40f; /* Giallo */
+        }
+        .error-message {
+            color: #e74c3c; /* Rosso */
+            font-weight: bold;
         }
         .day-title {
             font-weight: bold;
             font-size: 18px;
             margin-bottom: 5px;
+            color: #2980b9; /* Blu */
         }
         .day-info {
             font-size: 14px;
+            color: #555; /* Grigio scuro */
         }
+        .uv-index-low { color: #2ecc71; } /* Verde */
+        .uv-index-moderate { color: #f1c40f; } /* Giallo */
+        .uv-index-high { color: #e67e22; } /* Arancione */
+        .uv-index-very-high { color: #e74c3c; } /* Rosso */
+        .uv-index-extreme { color: #8e44ad; } /* Viola */
     </style>
 </head>
 <body>
@@ -69,7 +83,12 @@
     <script>
         function fetchForecast(lat, lon) {
             fetch(`/weather_forecast?lat=${lat}&lon=${lon}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Errore HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log("Dati ricevuti:", data);
 
@@ -77,7 +96,7 @@
                     container.innerHTML = ""; // Pulisci il contenitore
 
                     if (data.error) {
-                        container.innerHTML = `<p>Errore nel caricamento delle previsioni.</p>`;
+                        container.innerHTML = `<p class="error-message">${data.error}</p>`;
                         return;
                     }
 
@@ -94,23 +113,23 @@
                             <div class="day-title">${date}</div>
                             <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
                             <div class="day-info">Condizioni: ${day.condition}</div>
-                            <div class="day-info">UV Index: <span style="color: ${uvLevel.color};">${day.uv_index} (${uvLevel.label})</span></div>
+                            <div class="day-info">UV Index: <span class="${uvLevel.class}">${day.uv_index} (${uvLevel.label})</span></div>
                         `;
                         container.appendChild(dayDiv);
                     });
                 })
                 .catch(error => {
                     console.error("Errore nel caricamento delle previsioni:", error);
-                    document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
+                    document.getElementById("forecast-container").innerHTML = `<p class="error-message">Errore nel caricamento dei dati meteo.</p>`;
                 });
         }
 
         function getUVLevel(uvIndex) {
-            if (uvIndex <= 2) return { label: "Basso", color: "green" };
-            if (uvIndex <= 5) return { label: "Moderato", color: "yellow" };
-            if (uvIndex <= 7) return { label: "Alto", color: "orange" };
-            if (uvIndex <= 10) return { label: "Molto alto", color: "red" };
-            return { label: "Estremo", color: "purple" };
+            if (uvIndex <= 2) return { label: "Basso", class: "uv-index-low" };
+            if (uvIndex <= 5) return { label: "Moderato", class: "uv-index-moderate" };
+            if (uvIndex <= 7) return { label: "Alto", class: "uv-index-high" };
+            if (uvIndex <= 10) return { label: "Molto alto", class: "uv-index-very-high" };
+            return { label: "Estremo", class: "uv-index-extreme" };
         }
 
         function getLocationAndFetchForecast() {
