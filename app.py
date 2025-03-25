@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")  # Chiave API OpenWeatherMap
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")  # Sostituisci con la tua chiave API
 
 def get_emoji(weather_main):
     weather_icons = {
@@ -111,7 +111,6 @@ def weather_forecast():
                 'temp_min': round_to_half(data['temp_min']),
                 'temp_max': round_to_half(data['temp_max']),
                 'condition': data['condition'],
-                'uv_index': 0  # UV Index non disponibile con questo endpoint
             })
 
         return {
