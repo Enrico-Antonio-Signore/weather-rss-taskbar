@@ -2,32 +2,40 @@ from flask import Flask, Response, request, render_template, jsonify
 import requests
 import xml.etree.ElementTree as ET
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 WEATHER_API_KEY = "534016f5b5f34a0ca29102123252503"  # Chiave API WeatherAPI
 
-def get_emoji(weather_main):
+def get_emoji(weather_condition):
+    """Mappa le condizioni meteo a emoji con logica migliorata"""
+    condition = weather_condition.lower()
     weather_icons = {
         'clear': '☀️',
-        'clouds': '☁️',
+        'sunny': '☀️',
+        'cloud': '☁️',
+        'cloudy': '☁️',
         'rain': '🌧️',
-        'thunderstorm': '⛈️',
+        'thunder': '⛈️',
         'snow': '❄️',
         'mist': '🌫️',
+        'fog': '🌁',
         'drizzle': '🌦️',
-        'fog': '🌁'
+        'shower': '🌧️',
+        'overcast': '☁️'
     }
-    return weather_icons.get(weather_main.lower(), '🌡️')
+    return weather_icons.get(condition.split()[0], '🌡️')  # Prende la prima parola della condizione
 
 @app.route('/weather_rss')
 def weather_rss():
+    """Endpoint RSS esistente (mantenuto invariato)"""
     try:
         lat = request.args.get('lat')
         lon = request.args.get('lon')
         
         if not lat or not lon:
-            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
-            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()
+            loc = location_data.get('loc', '44.0647,12.4692')
             lat, lon = loc.split(',')
             city = location_data.get('city', 'Posizione sconosciuta')
             country = location_data.get('country', '')
@@ -45,7 +53,7 @@ def weather_rss():
         icon = get_emoji(weather_data['current']['condition']['text'])
 
     except Exception as e:
-        print("Errore in /weather_rss:", str(e))  # Log dell'errore
+        print(f"Errore in /weather_rss: {str(e)}")
         city = "Roma"
         temp = "N/D"
         condition = "Dati non disponibili"
@@ -63,62 +71,70 @@ def weather_rss():
 
 @app.route('/weather_forecast')
 def weather_forecast():
+    """Endpoint migliorato per l'interfaccia web"""
     try:
         lat = request.args.get('lat')
         lon = request.args.get('lon')
 
         if not lat or not lon:
-            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
-            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()
+            loc = location_data.get('loc', '44.0647,12.4692')
             lat, lon = loc.split(',')
 
         forecast_url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={lat},{lon}&days=7&aqi=no&alerts=no"
-        print(f"URL richiesta: {forecast_url}")  # Log dell'URL della richiesta
-
-        response = requests.get(forecast_url, timeout=10)  # Aumenta il timeout a 10 secondi
-        print(f"Risposta API: {response.status_code}, {response.text}")  # Log della risposta
-
+        response = requests.get(forecast_url, timeout=10)
+        
         if response.status_code != 200:
-            return {'error': 'Errore nella richiesta API'}, 500
+            return jsonify({'error': 'Errore nella richiesta API'}), 500
 
         forecast_data = response.json()
+        location = forecast_data['location']
 
         daily_forecast = []
         for day in forecast_data['forecast']['forecastday']:
             hourly_data = []
             for hour in day['hour']:
+                time_obj = datetime.strptime(hour['time'], '%Y-%m-%d %H:%M')
                 hourly_data.append({
-                    'time': hour['time'].split(' ')[1],  # Estrai solo l'ora (es. "14:00")
+                    'time': time_obj.strftime('%H:%M'),
                     'temp': hour['temp_c'],
+                    'precip': hour['precip_mm'],
                     'condition': hour['condition']['text'],
                     'icon': hour['condition']['icon']
                 })
+            
+            sunrise_time = datetime.strptime(day['astro']['sunrise'], '%I:%M %p')
+            sunset_time = datetime.strptime(day['astro']['sunset'], '%I:%M %p')
+            
             daily_forecast.append({
                 'date': day['date'],
                 'temp_min': day['day']['mintemp_c'],
                 'temp_max': day['day']['maxtemp_c'],
                 'condition': day['day']['condition']['text'],
                 'icon': day['day']['condition']['icon'],
-                'sunrise': day['astro']['sunrise'],
-                'sunset': day['astro']['sunset'],
+                'sunrise': sunrise_time.strftime('%H:%M'),
+                'sunset': sunset_time.strftime('%H:%M'),
                 'humidity': day['day']['avghumidity'],
                 'wind': day['day']['maxwind_kph'],
                 'hourly': hourly_data
             })
 
-        return {
-            'city': forecast_data['location']['name'],
+        return jsonify({
+            'city': location['name'],
+            'region': location.get('region', ''),
+            'country': location['country'],
             'forecast': daily_forecast
-        }
+        })
 
     except Exception as e:
-        print("Errore in /weather_forecast:", str(e))  # Log dell'errore completo
-        return {'error': 'Impossibile recuperare i dati meteo.'}, 500
+        print(f"Errore in /weather_forecast: {str(e)}")
+        return jsonify({'error': 'Impossibile recuperare i dati meteo'}), 500
 
 @app.route('/')
 def homepage():
-    return render_template('index.html')
+    """Pagina principale con interfaccia meteo"""
+    return render_template('weather.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
