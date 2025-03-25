@@ -6,116 +6,258 @@
     <title>METEO</title>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Stile Moderno e Minimalista */
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --light-bg: #f8f9fa;
+            --dark-bg: #121212;
+            --card-light: #ffffff;
+            --card-dark: #1e1e1e;
+            --text-light: #333333;
+            --text-dark: #f8f9fa;
+        }
+
         body {
             font-family: 'Rubik', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f4f4f9;
-            color: #333;
-            transition: background 0.3s, color 0.3s;
+            background: var(--light-bg);
+            color: var(--text-light);
+            transition: all 0.3s ease;
         }
+        
         body.dark-mode {
-            background: #121212;
-            color: #ffffff;
+            background: var(--dark-bg);
+            color: var(--text-dark);
         }
+
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
-            background: #2c3e50;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         header h1 {
-            font-size: 32px;
+            font-size: 28px;
             margin: 0;
             text-align: center;
             flex-grow: 1;
+            font-weight: 700;
+            letter-spacing: 1px;
         }
+
         #clock {
-            font-size: 20px;
-            font-weight: bold;
-            margin-right: 10px;
+            font-size: 18px;
+            font-weight: 500;
+            margin-right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
         }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .summary-container {
             padding: 20px;
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: var(--card-light);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             margin: 20px;
             text-align: center;
         }
+
         body.dark-mode .summary-container {
-            background: #333;
+            background: var(--card-dark);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
+
         .summary-container h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        .summary-container div {
-            margin-bottom: 5px;
-        }
-        .forecast-container {
-            padding: 20px;
-        }
-        .card {
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 22px;
             margin-bottom: 15px;
-            padding: 15px;
-            transition: transform 0.3s ease;
+            color: var(--primary-color);
         }
+
+        .week-summary {
+            display: flex;
+            justify-content: space-between;
+            overflow-x: auto;
+            padding: 10px 0;
+            gap: 10px;
+        }
+
+        .day-summary {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(67, 97, 238, 0.1);
+            transition: transform 0.2s;
+        }
+
+        body.dark-mode .day-summary {
+            background: rgba(67, 97, 238, 0.2);
+        }
+
+        .day-summary:hover {
+            transform: translateY(-5px);
+        }
+
+        .day-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+            text-transform: capitalize;
+        }
+
+        .day-weather {
+            font-size: 24px;
+            margin: 5px 0;
+        }
+
+        .day-temp {
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .max-temp {
+            color: #e63946;
+            font-weight: 500;
+        }
+
+        .min-temp {
+            color: #4361ee;
+            font-weight: 500;
+        }
+
+        .forecast-container {
+            padding: 0 20px 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-light);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
         body.dark-mode .card {
-            background: #333;
+            background: var(--card-dark);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-        }
-        .card-title {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .card-icon img {
-            width: 40px;
-            height: 40px;
-        }
-        .chart {
-            width: 100%;
-            height: 150px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            margin-top: 10px;
+            margin-bottom: 15px;
             position: relative;
         }
-        body.dark-mode .chart {
-            background: #444;
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .chart canvas {
-            width: 100%;
-            height: 100%;
+
+        .card-title .day-emoji {
+            font-size: 24px;
         }
+
+        .card-icon img {
+            width: 50px;
+            height: 50px;
+        }
+
+        .card-info {
+            margin-bottom: 15px;
+        }
+
+        .temp-range {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .temp-display {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .temp-value {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .weather-condition {
+            font-size: 16px;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        body.dark-mode .weather-condition {
+            color: #4cc9f0;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            height: 150px;
+            position: relative;
+        }
+
         .additional-info {
-            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
         }
-        .additional-info div {
-            margin-bottom: 5px;
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
         }
+
+        .info-item i {
+            font-size: 18px;
+        }
+
         .switch {
             position: relative;
             display: inline-block;
-            width: 50px;
-            height: 24px;
+            width: 60px;
+            height: 30px;
         }
+
         .switch input {
             opacity: 0;
             width: 0;
             height: 0;
         }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -125,44 +267,82 @@
             bottom: 0;
             background-color: #ccc;
             transition: 0.4s;
-            border-radius: 24px;
+            border-radius: 34px;
         }
+
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
             background-color: white;
             transition: 0.4s;
             border-radius: 50%;
+            z-index: 2;
         }
+
         input:checked + .slider {
             background-color: #2196F3;
         }
+
         input:checked + .slider:before {
-            transform: translateX(26px);
+            transform: translateX(30px);
         }
+
         .slider::after {
             content: "☀️";
             position: absolute;
-            top: 2px;
-            left: 5px;
-            font-size: 14px;
-            color: #f39c12;
+            top: 3px;
+            left: 8px;
+            font-size: 16px;
+            z-index: 1;
         }
+
         input:checked + .slider::after {
             content: "🌙";
-            left: 30px;
-            color: #2c3e50;
+            left: 35px;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (min-width: 768px) {
+            .forecast-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .forecast-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
     </style>
 </head>
 <body>
     <header>
         <h1>METEO</h1>
-        <div>
+        <div class="controls">
             <span id="clock">Caricamento orologio...</span>
             <label class="switch">
                 <input type="checkbox" id="darkModeToggle">
@@ -171,19 +351,48 @@
         </div>
     </header>
 
-    <!-- Riepilogo Settimanale -->
     <div class="summary-container" id="summary-container">
         <h2>Riepilogo Settimanale</h2>
-        <div id="avg-temp">Temperatura Media: Caricamento...</div>
-        <div id="total-rain">Precipitazioni Totali: Caricamento...</div>
-        <div id="common-condition">Condizioni Prevalenti: Caricamento...</div>
+        <div class="week-summary" id="week-summary">
+            <!-- I giorni verranno aggiunti qui dinamicamente -->
+        </div>
     </div>
 
-    <!-- Previsioni Giornaliere -->
-    <div class="forecast-container" id="forecast-container"></div>
+    <div class="forecast-container" id="forecast-container">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Funzione per capitalizzare la prima lettera di ogni parola
+        function capitalizeWords(str) {
+            return str.replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        // Funzione per ottenere il nome del giorno con emoji
+        function getDayWithEmoji(dateStr) {
+            const date = new Date(dateStr);
+            const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            const dayName = days[date.getDay()];
+            
+            const dayEmojis = {
+                'Domenica': '🌞',
+                'Lunedì': '😊',
+                'Martedì': '🔥',
+                'Mercoledì': '🌊',
+                'Giovedì': '⛈️',
+                'Venerdì': '🍹',
+                'Sabato': '🎉'
+            };
+            
+            return {
+                name: dayName,
+                emoji: dayEmojis[dayName] || '📅'
+            };
+        }
+
         // Funzione per aggiornare l'orologio in formato 24H
         function updateClock() {
             const now = new Date();
@@ -194,115 +403,151 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Funzione per caricare le previsioni
-        function fetchForecast(lat, lon) {
-            fetch(`/weather_forecast?lat=${lat}&lon=${lon}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Errore HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Dati ricevuti:", data);
+        // Funzione per ottenere emoji basate sulle condizioni meteo
+        function getWeatherEmoji(condition) {
+            const weatherIcons = {
+                'clear': '☀️',
+                'sunny': '☀️',
+                'cloud': '☁️',
+                'clouds': '☁️',
+                'rain': '🌧️',
+                'thunderstorm': '⛈️',
+                'snow': '❄️',
+                'mist': '🌫️',
+                'fog': '🌁',
+                'drizzle': '🌦️',
+                'shower': '🌧️',
+                'overcast': '☁️'
+            };
+            
+            const lowerCondition = condition.toLowerCase();
+            const key = Object.keys(weatherIcons).find(key => lowerCondition.includes(key));
+            return weatherIcons[key] || '🌡️';
+        }
 
-                    const container = document.getElementById("forecast-container");
-                    container.innerHTML = ""; // Pulisci il contenitore
+        // Funzione per creare il riepilogo settimanale
+        function createWeeklySummary(forecastData) {
+            const weekSummaryContainer = document.getElementById('week-summary');
+            weekSummaryContainer.innerHTML = '';
+            
+            forecastData.forEach(day => {
+                const dayInfo = getDayWithEmoji(day.date);
+                const weatherEmoji = getWeatherEmoji(day.condition);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day-summary';
+                dayElement.innerHTML = `
+                    <div class="day-name">${dayInfo.name.substring(0, 3)}</div>
+                    <div class="day-weather">${weatherEmoji}</div>
+                    <div class="day-temp">
+                        <span class="max-temp">${Math.round(day.temp_max)}°</span>
+                        <span class="min-temp">${Math.round(day.temp_min)}°</span>
+                    </div>
+                `;
+                
+                weekSummaryContainer.appendChild(dayElement);
+            });
+        }
 
-                    if (data.error) {
-                        container.innerHTML = `<p>Errore nel caricamento delle previsioni.</p>`;
-                        return;
-                    }
+        // Funzione per creare le previsioni giornaliere
+        function createDailyForecast(forecastData) {
+            const container = document.getElementById("forecast-container");
+            container.innerHTML = "";
 
-                    // Calcola statistiche per il riepilogo settimanale
-                    let totalTemp = 0;
-                    let totalRain = 0;
-                    let conditions = {};
-                    data.forecast.forEach(day => {
-                        totalTemp += (day.temp_min + day.temp_max) / 2;
-                        totalRain += day.hourly.reduce((sum, hour) => sum + hour.precip, 0);
-                        const condition = day.condition.toLowerCase();
-                        conditions[condition] = (conditions[condition] || 0) + 1;
-                    });
-                    const avgTemp = (totalTemp / data.forecast.length).toFixed(1);
-                    const commonCondition = Object.keys(conditions).reduce((a, b) => conditions[a] > conditions[b] ? a : b);
+            forecastData.forEach(day => {
+                const date = new Date(day.date);
+                const dayInfo = getDayWithEmoji(day.date);
+                const formattedDate = capitalizeWords(dayInfo.name) + ' ' + 
+                                      date.getDate() + ' ' + 
+                                      capitalizeWords(date.toLocaleDateString('it-IT', { month: 'long' }));
+                
+                const weatherEmoji = getWeatherEmoji(day.condition);
 
-                    // Aggiorna il riepilogo settimanale
-                    document.getElementById('avg-temp').textContent = `Temperatura Media: ${avgTemp}°C`;
-                    document.getElementById('total-rain').textContent = `Precipitazioni Totali: ${totalRain.toFixed(1)} mm`;
-                    document.getElementById('common-condition').textContent = `Condizioni Prevalenti: ${commonCondition}`;
-
-                    // Crea le cards giornaliere
-                    data.forecast.forEach(day => {
-                        const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-
-                        const card = document.createElement("div");
-                        card.classList.add("card");
-                        card.innerHTML = `
-                            <div class="card-header">
-                                <div class="card-title">${date} ${getEmoji(day.condition)}</div>
-                                <div class="card-icon"><img src="https:${day.icon}" alt="${day.condition}"></div>
+                const card = document.createElement("div");
+                card.classList.add("card");
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="day-emoji">${dayInfo.emoji}</span>
+                            ${formattedDate}
+                        </div>
+                        <div class="card-icon">
+                            <img src="https:${day.icon}" alt="${day.condition}">
+                            <div style="font-size: 24px; margin-top: 5px;">${weatherEmoji}</div>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <div class="temp-range">
+                            <div class="temp-display">
+                                <span style="color: #e63946;">▲</span>
+                                <span class="temp-value max-temp">${day.temp_max}°C</span>
                             </div>
-                            <div class="card-info">
-                                <div>Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
-                                <div>${day.condition}</div>
+                            <div class="temp-display">
+                                <span style="color: #4361ee;">▼</span>
+                                <span class="temp-value min-temp">${day.temp_min}°C</span>
                             </div>
-                            <div class="chart" id="temp-chart-${day.date}"></div>
-                            <div class="additional-info">
-                                <div>Alba: ${day.sunrise} | Tramonto: ${day.sunset}</div>
-                                <div>Umidità: ${day.humidity}%</div>
-                                <div>Vento: ${day.wind} km/h</div>
-                            </div>
-                        `;
-                        container.appendChild(card);
+                        </div>
+                        <div class="weather-condition">${capitalizeWords(day.condition.toLowerCase())}</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="temp-chart-${day.date}"></canvas>
+                    </div>
+                    <div class="additional-info">
+                        <div class="info-item">🌅 Alba: ${day.sunrise}</div>
+                        <div class="info-item">🌇 Tramonto: ${day.sunset}</div>
+                        <div class="info-item">💧 Umidità: ${day.humidity}%</div>
+                        <div class="info-item">🌬️ Vento: ${day.wind} km/h</div>
+                    </div>
+                `;
+                container.appendChild(card);
 
-                        // Grafico Temperatura
-                        createChart(`temp-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.temp));
-                    });
-                })
-                .catch(error => {
-                    console.error("Errore nel caricamento delle previsioni:", error);
-                    document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
-                });
+                // Grafico Temperatura
+                createChart(`temp-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.temp));
+            });
         }
 
         // Funzione per creare il grafico della temperatura
         function createChart(elementId, labels, data) {
-            const ctx = document.createElement("canvas");
-            document.getElementById(elementId).appendChild(ctx);
-            new Chart(ctx.getContext('2d'), {
+            const ctx = document.getElementById(elementId);
+            new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Temperatura (°C)',
                         data: data,
-                        borderColor: '#2c3e50',
-                        backgroundColor: 'rgba(44, 62, 80, 0.2)',
-                        borderWidth: 2,
+                        borderColor: '#4361ee',
+                        backgroundColor: 'rgba(67, 97, 238, 0.2)',
+                        borderWidth: 3,
                         fill: true,
-                        tension: 0.4 // Effetto curvo
+                        tension: 0.4,
+                        pointRadius: 0
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
                         }
                     },
                     scales: {
                         x: {
+                            grid: { display: false },
                             ticks: {
-                                color: getComputedStyle(document.body).color,
-                                maxTicksLimit: 6 // Riduci il numero di etichette
+                                color: getComputedStyle(document.body).getPropertyValue('--text-light'),
+                                maxTicksLimit: 6
                             }
                         },
                         y: {
-                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
                             ticks: {
-                                color: getComputedStyle(document.body).color
+                                color: getComputedStyle(document.body).getPropertyValue('--text-light')
                             }
                         }
                     }
@@ -310,48 +555,54 @@
             });
         }
 
-        // Funzione per ottenere emoji basate sulle condizioni meteo
-        function getEmoji(condition) {
-            const weatherIcons = {
-                'clear': '☀️',
-                'clouds': '☁️',
-                'rain': '🌧️',
-                'thunderstorm': '⛈️',
-                'snow': '❄️',
-                'mist': '🌫️',
-                'drizzle': '🌦️',
-                'fog': '🌁'
-            };
-            const key = Object.keys(weatherIcons).find(key => condition.toLowerCase().includes(key));
-            return weatherIcons[key] || '🌡️';
-        }
-
         // Gestione del Dark Mode
         document.getElementById('darkModeToggle').addEventListener('change', (event) => {
             document.body.classList.toggle('dark-mode', event.target.checked);
+            // Aggiorna i grafici quando cambia il tema
+            if (typeof Chart !== 'undefined') {
+                Chart.getRegisteredPlugins().forEach(plugin => {
+                    if (plugin.id === 'chartjs-plugin-annotation') return;
+                    Chart.instances.forEach(instance => instance.update());
+                });
+            }
         });
 
-        // Funzione per gestire la geolocalizzazione
-        function getLocationAndFetchForecast() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        fetchForecast(lat, lon);
-                    },
-                    error => {
-                        console.error("Errore nella geolocalizzazione:", error);
-                        fetchForecast(44.0647, 12.4692); // Posizione di default (Rimini, Italia)
-                    }
-                );
-            } else {
-                fetchForecast(44.0647, 12.4692); // Posizione di default
-            }
+        // Funzione per simulare il fetch dei dati (da sostituire con chiamata API reale)
+        function fetchWeatherData() {
+            // Simulazione dati per demo
+            const mockData = {
+                forecast: Array.from({length: 7}, (_, i) => ({
+                    date: new Date(Date.now() + 86400000 * i).toISOString().split('T')[0],
+                    temp_min: 15 + i,
+                    temp_max: 25 + i,
+                    condition: ["Sunny", "Cloudy", "Rain", "Thunderstorm", "Clear", "Drizzle", "Fog"][i % 7],
+                    icon: `//cdn.weatherapi.com/weather/64x64/day/${113 + i}.png`,
+                    humidity: 60 + (i * 3),
+                    wind: 10 + i,
+                    sunrise: `0${i+5}:30`,
+                    sunset: `2${i-1}:15`,
+                    hourly: Array.from({length: 24}, (_, h) => ({
+                        time: `${h}:00`,
+                        temp: 15 + i + (h/2) + Math.sin(h * Math.PI / 12) * 5,
+                        precip: i > 2 && i < 5 && h > 6 && h < 18 ? Math.random() * 3 : 0
+                    }))
+                }))
+            };
+            
+            return Promise.resolve(mockData);
         }
 
-        // Avvia il caricamento delle previsioni
-        getLocationAndFetchForecast();
+        // Caricamento iniziale dei dati
+        fetchWeatherData()
+            .then(data => {
+                createWeeklySummary(data.forecast);
+                createDailyForecast(data.forecast);
+            })
+            .catch(error => {
+                console.error("Errore nel caricamento delle previsioni:", error);
+                document.getElementById("forecast-container").innerHTML = 
+                    `<div class="card"><p>Errore nel caricamento dei dati meteo. ${error.message}</p></div>`;
+            });
     </script>
 </body>
 </html>
