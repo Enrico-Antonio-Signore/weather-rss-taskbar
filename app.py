@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import os
 from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates') 
 WEATHER_API_KEY = "534016f5b5f34a0ca29102123252503"  # Chiave API WeatherAPI
 
 def get_emoji(weather_condition):
@@ -133,7 +133,7 @@ def weather_forecast():
 @app.route('/')
 def homepage():
     """Pagina principale con interfaccia meteo"""
-    return render_template('weather.html')
+    return render_template('index.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
