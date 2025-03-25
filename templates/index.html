@@ -3,29 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo RSS</title>
+    <title>Meteo Settimanale</title>
     <style>
-        /* Flat UI Design */
+        /* Stile moderno e pulito */
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             text-align: center;
-            background: #f3f4f6; /* Grigio chiaro */
-            color: #333; /* Testo scuro */
+            background: linear-gradient(to right, #f79d00, #64b5f6);
+            color: white;
             margin: 0;
             padding: 0;
         }
         h1 {
             font-size: 28px;
-            color: #2c3e50; /* Blu scuro */
             margin-bottom: 20px;
         }
         #weather-container {
             margin: 20px auto;
             max-width: 600px;
             padding: 20px;
-            background: #ffffff; /* Bianco */
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Ombra leggera */
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
         }
         .forecast {
             display: flex;
@@ -34,46 +33,38 @@
             gap: 10px;
         }
         .day {
-            background: #ecf0f1; /* Grigio chiarissimo */
+            background: rgba(255, 255, 255, 0.3);
             padding: 15px;
             border-radius: 8px;
             width: calc(50% - 20px);
             text-align: left;
             font-size: 16px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease;
         }
         .day:hover {
             transform: scale(1.05);
-            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.15); /* Ombra più evidente */
         }
         .loading {
             font-size: 16px;
             margin-top: 10px;
-            color: #f1c40f; /* Giallo */
-        }
-        .error-message {
-            color: #e74c3c; /* Rosso */
-            font-weight: bold;
+            color: yellow;
         }
         .day-title {
             font-weight: bold;
             font-size: 18px;
             margin-bottom: 5px;
-            color: #2980b9; /* Blu */
         }
         .day-info {
             font-size: 14px;
-            color: #555; /* Grigio scuro */
         }
-        .uv-index-low { color: #2ecc71; } /* Verde */
-        .uv-index-moderate { color: #f1c40f; } /* Giallo */
-        .uv-index-high { color: #e67e22; } /* Arancione */
-        .uv-index-very-high { color: #e74c3c; } /* Rosso */
-        .uv-index-extreme { color: #8e44ad; } /* Viola */
+        .day-icon img {
+            width: 50px;
+            height: 50px;
+        }
     </style>
 </head>
 <body>
-    <h1>🌤️ Previsioni Meteo</h1>
+    <h1>🌤️ Previsioni Meteo Settimanali</h1>
     <div id="weather-container">
         <p class="loading">Caricamento dati...</p>
         <div id="weather-display"></div>
@@ -96,7 +87,7 @@
                     container.innerHTML = ""; // Pulisci il contenitore
 
                     if (data.error) {
-                        container.innerHTML = `<p class="error-message">${data.error}</p>`;
+                        container.innerHTML = `<p>Errore nel caricamento delle previsioni.</p>`;
                         return;
                     }
 
@@ -104,32 +95,23 @@
                     document.getElementById("weather-display").innerHTML = `<h2>${data.city}</h2>`;
 
                     data.forecast.forEach(day => {
-                        const date = new Date(day.date * 1000).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-                        const uvLevel = getUVLevel(day.uv_index);
+                        const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
                         const dayDiv = document.createElement("div");
                         dayDiv.classList.add("day");
                         dayDiv.innerHTML = `
                             <div class="day-title">${date}</div>
-                            <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
+                            <div class="day-icon"><img src="https:${day.icon}" alt="${day.condition}"></div>
                             <div class="day-info">Condizioni: ${day.condition}</div>
-                            <div class="day-info">UV Index: <span class="${uvLevel.class}">${day.uv_index} (${uvLevel.label})</span></div>
+                            <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
                         `;
                         container.appendChild(dayDiv);
                     });
                 })
                 .catch(error => {
                     console.error("Errore nel caricamento delle previsioni:", error);
-                    document.getElementById("forecast-container").innerHTML = `<p class="error-message">Errore nel caricamento dei dati meteo.</p>`;
+                    document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
                 });
-        }
-
-        function getUVLevel(uvIndex) {
-            if (uvIndex <= 2) return { label: "Basso", class: "uv-index-low" };
-            if (uvIndex <= 5) return { label: "Moderato", class: "uv-index-moderate" };
-            if (uvIndex <= 7) return { label: "Alto", class: "uv-index-high" };
-            if (uvIndex <= 10) return { label: "Molto alto", class: "uv-index-very-high" };
-            return { label: "Estremo", class: "uv-index-extreme" };
         }
 
         function getLocationAndFetchForecast() {
@@ -142,11 +124,11 @@
                     },
                     error => {
                         console.error("Errore nella geolocalizzazione:", error);
-                        fetchForecast(44.0647, 12.4692); // Posizione di default
+                        fetchForecast(44.0647, 12.4692); // Posizione di default (Rimini, Italia)
                     }
                 );
             } else {
-                fetchForecast(44.0647, 12.4692);
+                fetchForecast(44.0647, 12.4692); // Posizione di default
             }
         }
 
