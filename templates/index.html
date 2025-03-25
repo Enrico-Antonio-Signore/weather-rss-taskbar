@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌤️</title>
+    <title>METEO</title>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Stile Moderno e Flat */
+        /* Stile Moderno e Minimalista */
         body {
             font-family: 'Rubik', Arial, sans-serif;
             margin: 0;
@@ -38,43 +38,37 @@
             font-weight: bold;
             margin-right: 10px;
         }
-        .forecast-container {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            gap: 15px;
+        .summary-container {
             padding: 20px;
-        }
-        .forecast-container::-webkit-scrollbar {
-            height: 8px;
-        }
-        .forecast-container::-webkit-scrollbar-thumb {
-            background: #2c3e50;
+            background: #ffffff;
             border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+            text-align: center;
+        }
+        body.dark-mode .summary-container {
+            background: #333;
+        }
+        .summary-container h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .summary-container div {
+            margin-bottom: 5px;
+        }
+        .forecast-container {
+            padding: 20px;
         }
         .card {
             background: #ffffff;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-width: 90vw;
-            padding: 20px;
+            margin-bottom: 15px;
+            padding: 15px;
             transition: transform 0.3s ease;
-            scroll-snap-align: start;
         }
-        .card:not(:first-child) {
-            min-width: 70vw;
-        }
-        .card:nth-child(odd) {
-            background: #f8d7da; /* Rosa pastello */
-        }
-        .card:nth-child(even) {
-            background: #d4edda; /* Verde pastello */
-        }
-        body.dark-mode .card:nth-child(odd) {
-            background: #3a0ca3; /* Viola scuro */
-        }
-        body.dark-mode .card:nth-child(even) {
-            background: #4361ee; /* Blu scuro */
+        body.dark-mode .card {
+            background: #333;
         }
         .card-header {
             display: flex;
@@ -83,16 +77,16 @@
             margin-bottom: 10px;
         }
         .card-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
         }
         .card-icon img {
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
         }
         .chart {
             width: 100%;
-            height: 200px;
+            height: 150px;
             background: #e0e0e0;
             border-radius: 10px;
             margin-top: 10px;
@@ -167,7 +161,7 @@
 </head>
 <body>
     <header>
-        <h1>🌤️ METEO 🌤️</h1>
+        <h1>METEO</h1>
         <div>
             <span id="clock">Caricamento orologio...</span>
             <label class="switch">
@@ -176,6 +170,16 @@
             </label>
         </div>
     </header>
+
+    <!-- Riepilogo Settimanale -->
+    <div class="summary-container" id="summary-container">
+        <h2>Riepilogo Settimanale</h2>
+        <div id="avg-temp">Temperatura Media: Caricamento...</div>
+        <div id="total-rain">Precipitazioni Totali: Caricamento...</div>
+        <div id="common-condition">Condizioni Prevalenti: Caricamento...</div>
+    </div>
+
+    <!-- Previsioni Giornaliere -->
     <div class="forecast-container" id="forecast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -210,16 +214,30 @@
                         return;
                     }
 
-                    data.forecast.forEach((day, index) => {
+                    // Calcola statistiche per il riepilogo settimanale
+                    let totalTemp = 0;
+                    let totalRain = 0;
+                    let conditions = {};
+                    data.forecast.forEach(day => {
+                        totalTemp += (day.temp_min + day.temp_max) / 2;
+                        totalRain += day.hourly.reduce((sum, hour) => sum + hour.precip, 0);
+                        const condition = day.condition.toLowerCase();
+                        conditions[condition] = (conditions[condition] || 0) + 1;
+                    });
+                    const avgTemp = (totalTemp / data.forecast.length).toFixed(1);
+                    const commonCondition = Object.keys(conditions).reduce((a, b) => conditions[a] > conditions[b] ? a : b);
+
+                    // Aggiorna il riepilogo settimanale
+                    document.getElementById('avg-temp').textContent = `Temperatura Media: ${avgTemp}°C`;
+                    document.getElementById('total-rain').textContent = `Precipitazioni Totali: ${totalRain.toFixed(1)} mm`;
+                    document.getElementById('common-condition').textContent = `Condizioni Prevalenti: ${commonCondition}`;
+
+                    // Crea le cards giornaliere
+                    data.forecast.forEach(day => {
                         const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
                         const card = document.createElement("div");
                         card.classList.add("card");
-                        if (index === 0) {
-                            card.style.minWidth = "90vw"; // Prima card più grande
-                        } else {
-                            card.style.minWidth = "70vw"; // Card successive più piccole
-                        }
                         card.innerHTML = `
                             <div class="card-header">
                                 <div class="card-title">${date} ${getEmoji(day.condition)}</div>
