@@ -1,131 +1,138 @@
-from flask import Flask, Response, request, render_template, jsonify
-import requests
-import xml.etree.ElementTree as ET
-import os
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteo Settimanale</title>
+    <style>
+        /* Stile moderno e pulito */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(to right, #f79d00, #64b5f6);
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        #weather-container {
+            margin: 20px auto;
+            max-width: 600px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .forecast {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .day {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            width: calc(50% - 20px);
+            text-align: left;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        .day:hover {
+            transform: scale(1.05);
+        }
+        .loading {
+            font-size: 16px;
+            margin-top: 10px;
+            color: yellow;
+        }
+        .day-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .day-info {
+            font-size: 14px;
+        }
+        .day-icon img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌤️ Previsioni Meteo Settimanali</h1>
+    <div id="weather-container">
+        <p class="loading">Caricamento dati...</p>
+        <div id="weather-display"></div>
+        <div class="forecast" id="forecast-container"></div>
+    </div>
 
-app = Flask(__name__)
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")  # Sostituisci con la tua chiave API
+    <script>
+        function fetchForecast(lat, lon) {
+            fetch(`/weather_forecast?lat=${lat}&lon=${lon}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Errore HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Dati ricevuti:", data);
 
-def get_emoji(weather_main):
-    weather_icons = {
-        'clear': '☀️',
-        'clouds': '☁️',
-        'rain': '🌧️',
-        'thunderstorm': '⛈️',
-        'snow': '❄️',
-        'mist': '🌫️',
-        'drizzle': '🌦️',
-        'fog': '🌁'
-    }
-    return weather_icons.get(weather_main.lower(), '🌡️')
+                    const container = document.getElementById("forecast-container");
+                    container.innerHTML = ""; // Pulisci il contenitore
 
-def round_to_half(temp):
-    return round(float(temp) * 2) / 2
+                    if (data.error) {
+                        container.innerHTML = `<p>Errore nel caricamento delle previsioni.</p>`;
+                        return;
+                    }
 
-@app.route('/weather_rss')
-def weather_rss():
-    try:
-        lat = request.args.get('lat')
-        lon = request.args.get('lon')
-        
-        if not lat or not lon:
-            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
-            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
-            lat, lon = loc.split(',')
-            city = location_data.get('city', 'Posizione sconosciuta')
-            country = location_data.get('country', '')
-        else:
-            reverse_geo_url = f"http://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={lon}&limit=1&appid={OPENWEATHER_API_KEY}"
-            geo_data = requests.get(reverse_geo_url, timeout=3).json()
-            city = geo_data[0].get('name', 'Posizione sconosciuta') if geo_data else 'Posizione sconosciuta'
-            country = geo_data[0].get('country', '') if geo_data else ''
+                    document.querySelector(".loading").style.display = "none";
+                    document.getElementById("weather-display").innerHTML = `<h2>${data.city}</h2>`;
 
-        weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric&lang=it"
-        weather_data = requests.get(weather_url, timeout=3).json()
+                    data.forecast.forEach(day => {
+                        const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        temp = round_to_half(weather_data['main']['temp'])
-        temp_str = f"{int(temp)}°C" if temp.is_integer() else f"{temp}°C"
-        condition = weather_data['weather'][0]['description'].capitalize()
-        icon = get_emoji(weather_data['weather'][0]['main'])
-
-    except Exception as e:
-        print("Errore in /weather_rss:", str(e))  # Log dell'errore
-        city = "Roma"
-        temp_str = "N/D"
-        condition = "Dati non disponibili"
-        icon = "❓"
-        country = ""
-
-    rss = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
-    item = ET.SubElement(channel, "item")
-    ET.SubElement(item, "title").text = f"{icon} {temp_str} {condition[:20]}"
-    ET.SubElement(item, "description").text = f"{city}, {country}" if country else city
-
-    xml_str = ET.tostring(rss, encoding='unicode', method='xml')
-    return Response(f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}', mimetype="application/xml")
-
-@app.route('/weather_forecast')
-def weather_forecast():
-    try:
-        lat = request.args.get('lat')
-        lon = request.args.get('lon')
-
-        if not lat or not lon:
-            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
-            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
-            lat, lon = loc.split(',')
-
-        forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric&lang=it"
-        print(f"URL richiesta: {forecast_url}")  # Log dell'URL della richiesta
-
-        response = requests.get(forecast_url, timeout=10)  # Aumenta il timeout a 10 secondi
-        print(f"Risposta API: {response.status_code}, {response.text}")  # Log della risposta
-
-        if response.status_code != 200:
-            return {'error': 'Errore nella richiesta API'}, 500
-
-        forecast_data = response.json()
-
-        daily_forecast = {}
-        for item in forecast_data['list']:
-            date = item['dt_txt'].split(' ')[0]  # Estrai solo la data (YYYY-MM-DD)
-            if date not in daily_forecast:
-                daily_forecast[date] = {
-                    'temp_min': float(item['main']['temp_min']),
-                    'temp_max': float(item['main']['temp_max']),
-                    'condition': item['weather'][0]['description'].capitalize(),
-                }
-            else:
-                daily_forecast[date]['temp_min'] = min(daily_forecast[date]['temp_min'], float(item['main']['temp_min']))
-                daily_forecast[date]['temp_max'] = max(daily_forecast[date]['temp_max'], float(item['main']['temp_max']))
-
-        # Converti il dizionario in una lista per i primi 5 giorni
-        result = []
-        for i, (date, data) in enumerate(daily_forecast.items()):
-            if i >= 5:  # Limita a 5 giorni
-                break
-            result.append({
-                'date': int(datetime.strptime(date, '%Y-%m-%d').timestamp()),
-                'temp_min': round_to_half(data['temp_min']),
-                'temp_max': round_to_half(data['temp_max']),
-                'condition': data['condition'],
-            })
-
-        return {
-            'city': forecast_data['city']['name'],
-            'forecast': result
+                        const dayDiv = document.createElement("div");
+                        dayDiv.classList.add("day");
+                        dayDiv.innerHTML = `
+                            <div class="day-title">${date}</div>
+                            <div class="day-icon"><img src="${day.icon}" alt="${day.condition}"></div>
+                            <div class="day-info">Condizioni: ${day.condition}</div>
+                            <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
+                        `;
+                        container.appendChild(dayDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error("Errore nel caricamento delle previsioni:", error);
+                    document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
+                });
         }
 
-    except Exception as e:
-        print("Errore in /weather_forecast:", str(e))  # Log dell'errore completo
-        return {'error': 'Impossibile recuperare i dati meteo.'}, 500
+        function getLocationAndFetchForecast() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        fetchForecast(lat, lon);
+                    },
+                    error => {
+                        console.error("Errore nella geolocalizzazione:", error);
+                        fetchForecast(44.0647, 12.4692); // Posizione di default (Rimini, Italia)
+                    }
+                );
+            } else {
+                fetchForecast(44.0647, 12.4692); // Posizione di default
+            }
+        }
 
-@app.route('/')
-def homepage():
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+        getLocationAndFetchForecast();
+    </script>
+</body>
+</html>
