@@ -5,73 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meteo Settimanale</title>
     <style>
-        /* Stile moderno e pulito */
+        /* Stile Moderno e Responsive */
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background: linear-gradient(to right, #f79d00, #64b5f6);
-            color: white;
             margin: 0;
             padding: 0;
+            background: #f4f4f9;
+            color: #333;
+            transition: background 0.3s, color 0.3s;
         }
-        h1 {
-            font-size: 28px;
-            margin-bottom: 20px;
+        body.dark-mode {
+            background: #121212;
+            color: #ffffff;
         }
-        #weather-container {
-            margin: 20px auto;
-            max-width: 600px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #2c3e50;
+            color: white;
         }
-        .forecast {
+        header h1 {
+            font-size: 24px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        #clock {
+            font-size: 18px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .forecast-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 15px;
+            padding: 20px;
         }
-        .day {
-            background: rgba(255, 255, 255, 0.3);
-            padding: 15px;
-            border-radius: 8px;
+        .card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             width: calc(50% - 20px);
-            text-align: left;
-            font-size: 16px;
+            padding: 15px;
             transition: transform 0.3s ease;
         }
-        .day:hover {
+        body.dark-mode .card {
+            background: #333;
+            color: #fff;
+        }
+        .card:hover {
             transform: scale(1.05);
         }
-        .loading {
-            font-size: 16px;
-            margin-top: 10px;
-            color: yellow;
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
-        .day-title {
-            font-weight: bold;
+        .card-title {
             font-size: 18px;
-            margin-bottom: 5px;
+            font-weight: bold;
         }
-        .day-info {
-            font-size: 14px;
+        .card-icon img {
+            width: 40px;
+            height: 40px;
         }
-        .day-icon img {
-            width: 50px;
-            height: 50px;
+        .card-details {
+            display: none;
+            margin-top: 10px;
+        }
+        .card.expanded .card-details {
+            display: block;
+        }
+        .chart {
+            width: 100%;
+            height: 100px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        body.dark-mode .chart {
+            background: #444;
         }
     </style>
 </head>
 <body>
-    <h1>🌤️ Previsioni Meteo Settimanali</h1>
-    <div id="weather-container">
-        <p class="loading">Caricamento dati...</p>
-        <div id="weather-display"></div>
-        <div class="forecast" id="forecast-container"></div>
-    </div>
+    <header>
+        <h1>🌤️ Meteo Settimanale</h1>
+        <label class="switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+        </label>
+    </header>
+    <div id="clock">Caricamento orologio...</div>
+    <div class="forecast-container" id="forecast-container"></div>
 
     <script>
+        // Funzione per aggiornare l'orologio
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Funzione per caricare le previsioni
         function fetchForecast(lat, lon) {
             fetch(`/weather_forecast?lat=${lat}&lon=${lon}`)
                 .then(response => {
@@ -91,21 +171,29 @@
                         return;
                     }
 
-                    document.querySelector(".loading").style.display = "none";
-                    document.getElementById("weather-display").innerHTML = `<h2>${data.city}</h2>`;
-
                     data.forecast.forEach(day => {
                         const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                        const dayDiv = document.createElement("div");
-                        dayDiv.classList.add("day");
-                        dayDiv.innerHTML = `
-                            <div class="day-title">${date}</div>
-                            <div class="day-icon"><img src="https:${day.icon}" alt="${day.condition}"></div>
-                            <div class="day-info">Condizioni: ${day.condition}</div>
-                            <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
+                        const card = document.createElement("div");
+                        card.classList.add("card");
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <div class="card-title">${date}</div>
+                                <div class="card-icon"><img src="https:${day.icon}" alt="${day.condition}"></div>
+                            </div>
+                            <div class="card-info">
+                                <div>Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
+                                <div>${day.condition}</div>
+                            </div>
+                            <div class="card-details">
+                                <div>Alba: ${day.sunrise} | Tramonto: ${day.sunset}</div>
+                                <div>Umidità: ${day.humidity}%</div>
+                                <div>Vento: ${day.wind} km/h</div>
+                            </div>
+                            <div class="chart"></div>
                         `;
-                        container.appendChild(dayDiv);
+                        card.addEventListener('click', () => card.classList.toggle('expanded'));
+                        container.appendChild(card);
                     });
                 })
                 .catch(error => {
@@ -114,6 +202,7 @@
                 });
         }
 
+        // Funzione per gestire la geolocalizzazione
         function getLocationAndFetchForecast() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -132,6 +221,12 @@
             }
         }
 
+        // Gestione del Dark Mode
+        document.getElementById('darkModeToggle').addEventListener('change', (event) => {
+            document.body.classList.toggle('dark-mode', event.target.checked);
+        });
+
+        // Avvia il caricamento delle previsioni
         getLocationAndFetchForecast();
     </script>
 </body>
