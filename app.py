@@ -1,138 +1,111 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo Settimanale</title>
-    <style>
-        /* Stile moderno e pulito */
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: linear-gradient(to right, #f79d00, #64b5f6);
-            color: white;
-            margin: 0;
-            padding: 0;
-        }
-        h1 {
-            font-size: 28px;
-            margin-bottom: 20px;
-        }
-        #weather-container {
-            margin: 20px auto;
-            max-width: 600px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-        }
-        .forecast {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-        }
-        .day {
-            background: rgba(255, 255, 255, 0.3);
-            padding: 15px;
-            border-radius: 8px;
-            width: calc(50% - 20px);
-            text-align: left;
-            font-size: 16px;
-            transition: transform 0.3s ease;
-        }
-        .day:hover {
-            transform: scale(1.05);
-        }
-        .loading {
-            font-size: 16px;
-            margin-top: 10px;
-            color: yellow;
-        }
-        .day-title {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-        .day-info {
-            font-size: 14px;
-        }
-        .day-icon img {
-            width: 50px;
-            height: 50px;
-        }
-    </style>
-</head>
-<body>
-    <h1>🌤️ Previsioni Meteo Settimanali</h1>
-    <div id="weather-container">
-        <p class="loading">Caricamento dati...</p>
-        <div id="weather-display"></div>
-        <div class="forecast" id="forecast-container"></div>
-    </div>
+from flask import Flask, Response, request, render_template, jsonify
+import requests
+import xml.etree.ElementTree as ET
+import os
 
-    <script>
-        function fetchForecast(lat, lon) {
-            fetch(`/weather_forecast?lat=${lat}&lon=${lon}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Errore HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Dati ricevuti:", data);
+app = Flask(__name__)
+WEATHER_API_KEY = "534016f5b5f34a0ca29102123252503"  # Chiave API WeatherAPI
 
-                    const container = document.getElementById("forecast-container");
-                    container.innerHTML = ""; // Pulisci il contenitore
+def get_emoji(weather_main):
+    weather_icons = {
+        'clear': '☀️',
+        'clouds': '☁️',
+        'rain': '🌧️',
+        'thunderstorm': '⛈️',
+        'snow': '❄️',
+        'mist': '🌫️',
+        'drizzle': '🌦️',
+        'fog': '🌁'
+    }
+    return weather_icons.get(weather_main.lower(), '🌡️')
 
-                    if (data.error) {
-                        container.innerHTML = `<p>Errore nel caricamento delle previsioni.</p>`;
-                        return;
-                    }
+@app.route('/weather_rss')
+def weather_rss():
+    try:
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+        
+        if not lat or not lon:
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
+            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            lat, lon = loc.split(',')
+            city = location_data.get('city', 'Posizione sconosciuta')
+            country = location_data.get('country', '')
+        else:
+            reverse_geo_url = f"http://api.weatherapi.com/v1/search.json?key={WEATHER_API_KEY}&q={lat},{lon}"
+            geo_data = requests.get(reverse_geo_url, timeout=3).json()
+            city = geo_data[0].get('name', 'Posizione sconosciuta') if geo_data else 'Posizione sconosciuta'
+            country = geo_data[0].get('country', '') if geo_data else ''
 
-                    document.querySelector(".loading").style.display = "none";
-                    document.getElementById("weather-display").innerHTML = `<h2>${data.city}</h2>`;
+        weather_url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={lat},{lon}"
+        weather_data = requests.get(weather_url, timeout=3).json()
 
-                    data.forecast.forEach(day => {
-                        const date = new Date(day.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        temp = weather_data['current']['temp_c']
+        condition = weather_data['current']['condition']['text'].capitalize()
+        icon = get_emoji(weather_data['current']['condition']['text'])
 
-                        const dayDiv = document.createElement("div");
-                        dayDiv.classList.add("day");
-                        dayDiv.innerHTML = `
-                            <div class="day-title">${date}</div>
-                            <div class="day-icon"><img src="${day.icon}" alt="${day.condition}"></div>
-                            <div class="day-info">Condizioni: ${day.condition}</div>
-                            <div class="day-info">Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
-                        `;
-                        container.appendChild(dayDiv);
-                    });
-                })
-                .catch(error => {
-                    console.error("Errore nel caricamento delle previsioni:", error);
-                    document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
-                });
+    except Exception as e:
+        print("Errore in /weather_rss:", str(e))  # Log dell'errore
+        city = "Roma"
+        temp = "N/D"
+        condition = "Dati non disponibili"
+        icon = "❓"
+        country = ""
+
+    rss = ET.Element("rss", version="2.0")
+    channel = ET.SubElement(rss, "channel")
+    item = ET.SubElement(channel, "item")
+    ET.SubElement(item, "title").text = f"{icon} {temp}°C {condition[:20]}"
+    ET.SubElement(item, "description").text = f"{city}, {country}" if country else city
+
+    xml_str = ET.tostring(rss, encoding='unicode', method='xml')
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}', mimetype="application/xml")
+
+@app.route('/weather_forecast')
+def weather_forecast():
+    try:
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+
+        if not lat or not lon:
+            location_data = requests.get('https://ipinfo.io/json', timeout=3).json()  # Usa ipinfo.io
+            loc = location_data.get('loc', '44.0647,12.4692')  # Default: coordinate di Rimini
+            lat, lon = loc.split(',')
+
+        forecast_url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={lat},{lon}&days=7&aqi=no&alerts=no"
+        print(f"URL richiesta: {forecast_url}")  # Log dell'URL della richiesta
+
+        response = requests.get(forecast_url, timeout=10)  # Aumenta il timeout a 10 secondi
+        print(f"Risposta API: {response.status_code}, {response.text}")  # Log della risposta
+
+        if response.status_code != 200:
+            return {'error': 'Errore nella richiesta API'}, 500
+
+        forecast_data = response.json()
+
+        daily_forecast = []
+        for day in forecast_data['forecast']['forecastday']:
+            daily_forecast.append({
+                'date': day['date'],
+                'temp_min': day['day']['mintemp_c'],
+                'temp_max': day['day']['maxtemp_c'],
+                'condition': day['day']['condition']['text'],
+                'icon': day['day']['condition']['icon']
+            })
+
+        return {
+            'city': forecast_data['location']['name'],
+            'forecast': daily_forecast
         }
 
-        function getLocationAndFetchForecast() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        fetchForecast(lat, lon);
-                    },
-                    error => {
-                        console.error("Errore nella geolocalizzazione:", error);
-                        fetchForecast(44.0647, 12.4692); // Posizione di default (Rimini, Italia)
-                    }
-                );
-            } else {
-                fetchForecast(44.0647, 12.4692); // Posizione di default
-            }
-        }
+    except Exception as e:
+        print("Errore in /weather_forecast:", str(e))  # Log dell'errore completo
+        return {'error': 'Impossibile recuperare i dati meteo.'}, 500
 
-        getLocationAndFetchForecast();
-    </script>
-</body>
-</html>
+@app.route('/')
+def homepage():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
