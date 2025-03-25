@@ -76,9 +76,9 @@
         .forecast-container {
             display: flex;
             overflow-x: auto;
+            scroll-snap-type: x mandatory;
             gap: 15px;
             padding: 20px;
-            scroll-snap-type: x mandatory;
         }
         .forecast-container::-webkit-scrollbar {
             height: 8px;
@@ -91,17 +91,15 @@
             background: #ffffff;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 300px;
-            padding: 15px;
+            width: 100vw;
+            min-height: 100vh;
+            padding: 20px;
             transition: transform 0.3s ease;
             scroll-snap-align: start;
         }
         body.dark-mode .card {
             background: #333;
             color: #fff;
-        }
-        .card:hover {
-            transform: scale(1.05);
         }
         .card-header {
             display: flex;
@@ -110,12 +108,12 @@
             margin-bottom: 10px;
         }
         .card-title {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
         }
         .card-icon img {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
         }
         .chart {
             width: 100%;
@@ -137,6 +135,13 @@
         }
         .additional-info div {
             margin-bottom: 5px;
+        }
+        .card-footer {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .card-footer span {
+            font-weight: bold;
         }
     </style>
 </head>
@@ -191,14 +196,17 @@
                         card.classList.add("card");
                         card.innerHTML = `
                             <div class="card-header">
-                                <div class="card-title">${date}</div>
+                                <div class="card-title">${date} <span>${getEmoji(day.condition)}</span></div>
                                 <div class="card-icon"><img src="https:${day.icon}" alt="${day.condition}"></div>
                             </div>
                             <div class="card-info">
                                 <div>Min: ${day.temp_min}°C | Max: ${day.temp_max}°C</div>
                                 <div>${day.condition}</div>
                             </div>
-                            <div class="chart" id="chart-${day.date}"></div>
+                            <div class="chart" id="temp-chart-${day.date}"></div>
+                            <div class="chart" id="uv-chart-${day.date}"></div>
+                            <div class="chart" id="precip-chart-${day.date}"></div>
+                            <div class="chart" id="air-quality-chart-${day.date}"></div>
                             <div class="additional-info">
                                 <div>Alba: ${day.sunrise} | Tramonto: ${day.sunset}</div>
                                 <div>Umidità: ${day.humidity}%</div>
@@ -207,53 +215,81 @@
                         `;
                         container.appendChild(card);
 
-                        // Crea il grafico dinamico per le temperature orarie
-                        const ctx = document.createElement("canvas");
-                        document.getElementById(`chart-${day.date}`).appendChild(ctx);
-                        const hourlyTemps = day.hourly.map(hour => hour.temp);
-                        const hourlyTimes = day.hourly.map(hour => hour.time);
-                        new Chart(ctx.getContext('2d'), {
-                            type: 'line',
-                            data: {
-                                labels: hourlyTimes,
-                                datasets: [{
-                                    label: 'Temperatura (°C)',
-                                    data: hourlyTemps,
-                                    borderColor: '#2c3e50',
-                                    backgroundColor: 'rgba(44, 62, 80, 0.2)',
-                                    borderWidth: 2,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    }
-                                },
-                                scales: {
-                                    x: {
-                                        ticks: {
-                                            color: getComputedStyle(document.body).color
-                                        }
-                                    },
-                                    y: {
-                                        beginAtZero: false,
-                                        ticks: {
-                                            color: getComputedStyle(document.body).color
-                                        }
-                                    }
-                                }
-                            }
-                        });
+                        // Grafico Temperatura
+                        createChart(`temp-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.temp), 'Temperatura (°C)', '#2c3e50');
+
+                        // Grafico UV Index
+                        createChart(`uv-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.uv), 'Indice UV', '#f39c12');
+
+                        // Grafico Precipitazioni
+                        createChart(`precip-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.precip), 'Precipitazioni (mm)', '#3498db');
+
+                        // Grafico Qualità dell'Aria
+                        createChart(`air-quality-chart-${day.date}`, day.hourly.map(hour => hour.time), day.hourly.map(hour => hour.air_quality || 0), 'Qualità Aria (PM2.5)', '#e74c3c');
                     });
                 })
                 .catch(error => {
                     console.error("Errore nel caricamento delle previsioni:", error);
                     document.getElementById("forecast-container").innerHTML = `<p>Errore nel caricamento dei dati meteo.</p>`;
                 });
+        }
+
+        // Funzione per creare grafici
+        function createChart(elementId, labels, data, labelText, color) {
+            const ctx = document.createElement("canvas");
+            document.getElementById(elementId).appendChild(ctx);
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelText,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: `rgba(${color.slice(1)}, 0.2)`,
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: getComputedStyle(document.body).color
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: getComputedStyle(document.body).color
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Funzione per ottenere emoji basate sulle condizioni meteo
+        function getEmoji(condition) {
+            const weatherIcons = {
+                'clear': '☀️',
+                'clouds': '☁️',
+                'rain': '🌧️',
+                'thunderstorm': '⛈️',
+                'snow': '❄️',
+                'mist': '🌫️',
+                'drizzle': '🌦️',
+                'fog': '🌁'
+            };
+            const key = Object.keys(weatherIcons).find(key => condition.toLowerCase().includes(key));
+            return weatherIcons[key] || '🌡️';
         }
 
         // Gestione del Dark Mode
