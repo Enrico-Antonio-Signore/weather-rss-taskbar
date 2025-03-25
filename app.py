@@ -90,7 +90,11 @@ def weather_forecast():
                 'temp_min': day['day']['mintemp_c'],
                 'temp_max': day['day']['maxtemp_c'],
                 'condition': day['day']['condition']['text'],
-                'icon': day['day']['condition']['icon']
+                'icon': day['day']['condition']['icon'],
+                'sunrise': day['astro']['sunrise'],
+                'sunset': day['astro']['sunset'],
+                'humidity': day['day']['avghumidity'],
+                'wind': day['day']['maxwind_kph']
             })
 
         return {
