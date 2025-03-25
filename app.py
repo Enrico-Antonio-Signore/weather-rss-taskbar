@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import os
 
 app = Flask(__name__)
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "c261fa04a85ef65367fee878d0313041")  # Chiave API OpenWeatherMap
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "2d68f55f4b6ce1972e97202db01bd879")  # Chiave API OpenWeatherMap
 
 def get_emoji(weather_main):
     weather_icons = {
