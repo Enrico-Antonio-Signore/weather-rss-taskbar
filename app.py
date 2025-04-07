@@ -44,6 +44,31 @@ def get_emoji(condition):
     }
     return emoji_map.get(condition.lower().split()[0], '🌡️')
 
+def translate_condition(condition_en):
+    """Traduce le condizioni meteo da inglese a italiano"""
+    translation_map = {
+        'Sunny': 'Soleggiato',
+        'Clear': 'Sereno',
+        'Partly cloudy': 'Parzialmente nuvoloso',
+        'Cloudy': 'Nuvoloso',
+        'Overcast': 'Coperto',
+        'Mist': 'Foschia',
+        'Fog': 'Nebbia',
+        'Light rain': 'Pioggia leggera',
+        'Moderate rain': 'Pioggia moderata',
+        'Heavy rain': 'Pioggia intensa',
+        'Light snow': 'Neve leggera',
+        'Moderate snow': 'Neve moderata',
+        'Heavy snow': 'Neve intensa',
+        'Light rain shower': 'Rovescio leggero',
+        'Moderate rain shower': 'Rovescio moderato',
+        'Heavy rain shower': 'Rovescio intenso',
+        'Thunderstorm': 'Temporale',
+        'Patchy rain possible': 'Possibili piogge sparse',
+        'Patchy snow possible': 'Possibili nevicate sparse'
+    }
+    return translation_map.get(condition_en, condition_en)
+
 def format_time(time_str, full=False):
     """Formatta l'ora in formato HH:MM"""
     try:
@@ -80,18 +105,18 @@ def weather_rss():
     lat = request.args.get('lat')
     lon = request.args.get('lon')
     
-    # Se mancano le coordinate, restituisci un RSS di errore
     if not lat or not lon:
         return generate_rss_response('❓ Attiva la geolocalizzazione', 'Posizione non disponibile')
 
     try:
-        # Recupera i dati meteo correnti
-        current_url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={lat},{lon}"
+        current_url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={lat},{lon}&lang=it"
         current_data = requests.get(current_url, timeout=3).json()
         
-        condition = current_data['current']['condition']['text']
+        condition_en = current_data['current']['condition']['text']
+        condition_it = translate_condition(condition_en)
+        temp_c = round(current_data['current']['temp_c'])
         return generate_rss_response(
-            f"{get_emoji(condition)} {current_data['current']['temp_c']}°C {condition[:20]}",
+            f"{get_emoji(condition_en)} {temp_c}°C {condition_it[:20]}",
             f"{current_data['location']['name']}, {current_data['location']['country']}"
         )
     except Exception:
@@ -104,15 +129,12 @@ def weather_forecast():
     Endpoint JSON per l'applicazione web
     Formato: /weather_forecast?lat=XX.X&lon=YY.Y
     """
-    # Ottieni coordinate con fallback a Roma
     lat = request.args.get('lat', type=float) or DEFAULT_LOCATION['lat']
     lon = request.args.get('lon', type=float) or DEFAULT_LOCATION['lon']
     
-    # Recupera le previsioni
-    forecast_url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={lat},{lon}&days=7&aqi=no&alerts=no"
+    forecast_url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={lat},{lon}&days=7&aqi=no&alerts=no&lang=it"
     forecast_data = requests.get(forecast_url, timeout=API_TIMEOUT).json()
 
-    # Estrai i dati essenziali
     location = forecast_data['location']
     processed_data = {
         'city': location['name'],
@@ -121,7 +143,6 @@ def weather_forecast():
         'forecast': []
     }
 
-    # Processa ogni giorno di previsione
     for day in forecast_data['forecast']['forecastday']:
         processed_day = {
             'date': day['date'],
@@ -136,7 +157,6 @@ def weather_forecast():
             'hourly': []
         }
 
-        # Processa i dati orari
         for hour in day['hour']:
             processed_day['hourly'].append({
                 'time': format_time(hour['time'], full=True),
@@ -164,10 +184,7 @@ def homepage():
 # ==============================================
 
 if __name__ == '__main__':
-    # Configura la porta dal environment o usa default
     port = int(os.environ.get("PORT", 10000))
-    
-    # Avvia l'applicazione
     app.run(
         host='0.0.0.0',
         port=port,
