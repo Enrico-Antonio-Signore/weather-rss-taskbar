@@ -5,188 +5,108 @@ import os
 from datetime import datetime
 from functools import wraps
 
-# Configurazione iniziale
 app = Flask(__name__, template_folder='templates')
-WEATHER_API_KEY = "534016f5b5f34a0ca29102123252503"
-DEFAULT_LOCATION = {'lat': 41.9028, 'lon': 12.4964}  # Coordinate di Roma come fallback
-API_TIMEOUT = 10  # Timeout in secondi per le richieste API
+API_KEY = "c261fa04a85ef65367fee878d0313041"
+DEFAULT_LOC = {'lat': 41.9028, 'lon': 12.4964}
+TIMEOUT = 10
 
-# ==============================================
-# DECORATORI & HELPER FUNCTIONS
-# ==============================================
-
-def handle_errors(f):
-    """Decoratore per la gestione centralizzata degli errori"""
+def gestisci_errori(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except requests.exceptions.Timeout:
-            app.logger.error("Timeout nel collegamento al servizio meteo")
-            return jsonify({'error': 'Il servizio meteo non risponde'}), 504
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Errore di connessione: {str(e)}")
-            return jsonify({'error': 'Errore di connessione al servizio meteo'}), 502
-        except KeyError as e:
-            app.logger.error(f"Dati API non validi: {str(e)}")
-            return jsonify({'error': 'Formato dati meteo non riconosciuto'}), 502
+            return jsonify({'errore': 'Servizio non disponibile'}), 504
         except Exception as e:
-            app.logger.error(f"Errore imprevisto: {str(e)}")
-            return jsonify({'error': 'Errore interno del server'}), 500
+            return jsonify({'errore': 'Errore interno'}), 500
     return wrapper
 
-def get_emoji(condition):
-    """Restituisce l'emoji corrispondente alla condizione meteo"""
-    emoji_map = {
-        'clear': '☀️', 'sunny': '☀️', 'cloud': '☁️', 'cloudy': '☁️',
-        'rain': '🌧️', 'thunder': '⛈️', 'snow': '❄️', 'mist': '🌫️',
-        'fog': '🌁', 'drizzle': '🌦️', 'shower': '🌧️', 'overcast': '☁️'
-    }
-    return emoji_map.get(condition.lower().split()[0], '🌡️')
+emoji_meteo = {
+    200: '⛈️', 201: '⛈️', 202: '⛈️', 210: '🌩️', 211: '🌩️', 
+    212: '🌩️', 221: '🌩️', 230: '⛈️', 231: '⛈️', 232: '⛈️',
+    300: '🌧️', 301: '🌧️', 302: '🌧️', 310: '🌧️', 311: '🌧️',
+    312: '🌧️', 313: '🌧️', 314: '🌧️', 321: '🌧️',
+    500: '🌦️', 501: '🌧️', 502: '🌧️', 503: '🌧️', 504: '🌧️',
+    511: '🌨️', 520: '🌧️', 521: '🌧️', 522: '🌧️', 531: '🌧️',
+    600: '❄️', 601: '❄️', 602: '❄️', 611: '🌨️', 612: '🌨️',
+    613: '🌨️', 615: '🌨️', 616: '🌨️', 620: '🌨️', 621: '🌨️', 622: '🌨️',
+    701: '🌫️', 711: '🌫️', 721: '🌫️', 731: '🌫️', 741: '🌁',
+    751: '🌫️', 761: '🌫️', 762: '🌫️', 771: '🌫️', 781: '🌪️',
+    800: '☀️', 801: '⛅', 802: '⛅', 803: '☁️', 804: '☁️'
+}
 
-def translate_condition(condition_en):
-    """Traduce le condizioni meteo da inglese a italiano"""
-    translation_map = {
-        'Sunny': 'Soleggiato',
-        'Clear': 'Sereno',
-        'Partly cloudy': 'Parzialmente nuvoloso',
-        'Cloudy': 'Nuvoloso',
-        'Overcast': 'Coperto',
-        'Mist': 'Foschia',
-        'Fog': 'Nebbia',
-        'Light rain': 'Pioggia leggera',
-        'Moderate rain': 'Pioggia moderata',
-        'Heavy rain': 'Pioggia intensa',
-        'Light snow': 'Neve leggera',
-        'Moderate snow': 'Neve moderata',
-        'Heavy snow': 'Neve intensa',
-        'Light rain shower': 'Rovescio leggero',
-        'Moderate rain shower': 'Rovescio moderato',
-        'Heavy rain shower': 'Rovescio intenso',
-        'Thunderstorm': 'Temporale',
-        'Patchy rain possible': 'Possibili piogge sparse',
-        'Patchy snow possible': 'Possibili nevicate sparse'
-    }
-    return translation_map.get(condition_en, condition_en)
-
-def format_time(time_str, full=False):
-    """Formatta l'ora in formato HH:MM"""
-    try:
-        if full:  # Per timestamp completi (YYYY-MM-DD HH:MM)
-            return datetime.strptime(time_str, '%Y-%m-%d %H:%M').strftime('%H:%M')
-        else:     # Per ore in formato 12h (03:45 PM)
-            return datetime.strptime(time_str, '%I:%M %p').strftime('%H:%M')
-    except ValueError:
-        return time_str  # Fallback se il formato non è riconosciuto
-
-def generate_rss_response(title, description):
-    """Genera una risposta RSS standardizzata"""
+def crea_rss(titolo, descrizione):
     rss = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
-    item = ET.SubElement(channel, "item")
-    ET.SubElement(item, "title").text = title
-    ET.SubElement(item, "description").text = description
-    return Response(
-        f'<?xml version="1.0" encoding="UTF-8"?>\n{ET.tostring(rss, encoding="unicode", method="xml")}',
-        mimetype="application/xml"
-    )
-
-# ==============================================
-# API ENDPOINTS
-# ==============================================
+    canale = ET.SubElement(rss, "channel")
+    item = ET.SubElement(canale, "item")
+    ET.SubElement(item, "title").text = titolo
+    ET.SubElement(item, "description").text = descrizione
+    return Response(f'<?xml version="1.0"?>\n{ET.tostring(rss, encoding="unicode")}', mimetype="application/xml")
 
 @app.route('/weather_rss')
-@handle_errors
-def weather_rss():
-    """
-    Endpoint RSS per applicazioni esterne
-    Formato: /weather_rss?lat=XX.X&lon=YY.Y
-    """
-    lat = request.args.get('lat')
-    lon = request.args.get('lon')
-    
+@gestisci_errori
+def meteo_rss():
+    lat, lon = request.args.get('lat'), request.args.get('lon')
     if not lat or not lon:
-        return generate_rss_response('❓ Attiva la geolocalizzazione', 'Posizione non disponibile')
+        return crea_rss('❓ Attiva geolocalizzazione', 'Posizione non disponibile')
 
     try:
-        current_url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={lat},{lon}&lang=it"
-        current_data = requests.get(current_url, timeout=3).json()
-        
-        condition_en = current_data['current']['condition']['text']
-        condition_it = translate_condition(condition_en)
-        temp_c = round(current_data['current']['temp_c'])
-        return generate_rss_response(
-            f"{get_emoji(condition_en)} {temp_c}°C {condition_it[:20]}",
-            f"{current_data['location']['name']}, {current_data['location']['country']}"
+        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=it"
+        dati = requests.get(url, timeout=3).json()
+        meteo = dati['weather'][0]
+        return crea_rss(
+            f"{emoji_meteo.get(meteo['id'], '🌡️')} {round(dati['main']['temp'])}°C {meteo['description']}",
+            f"{dati.get('name', '')}, {dati.get('sys', {}).get('country', '')}"
         )
-    except Exception:
-        return generate_rss_response('❓ Errore meteo', 'Dati non disponibili')
+    except:
+        return crea_rss('❓ Errore meteo', 'Dati non disponibili')
 
 @app.route('/weather_forecast')
-@handle_errors
-def weather_forecast():
-    """
-    Endpoint JSON per l'applicazione web
-    Formato: /weather_forecast?lat=XX.X&lon=YY.Y
-    """
-    lat = request.args.get('lat', type=float) or DEFAULT_LOCATION['lat']
-    lon = request.args.get('lon', type=float) or DEFAULT_LOCATION['lon']
+@gestisci_errori
+def previsioni():
+    lat = request.args.get('lat', type=float) or DEFAULT_LOC['lat']
+    lon = request.args.get('lon', type=float) or DEFAULT_LOC['lon']
     
-    forecast_url = f"http://api.weatherapi.com/v1/forecast.json?key={WEATHER_API_KEY}&q={lat},{lon}&days=7&aqi=no&alerts=no&lang=it"
-    forecast_data = requests.get(forecast_url, timeout=API_TIMEOUT).json()
+    try:
+        url_corrente = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=it"
+        url_previsioni = f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=it"
+        corrente, previsioni = requests.get(url_corrente, timeout=TIMEOUT).json(), requests.get(url_previsioni, timeout=TIMEOUT).json()
 
-    location = forecast_data['location']
-    processed_data = {
-        'city': location['name'],
-        'region': location.get('region', ''),
-        'country': location['country'],
-        'forecast': []
-    }
+        giorni = {}
+        for ora in previsioni['list']:
+            data = datetime.fromtimestamp(ora['dt']).strftime('%Y-%m-%d')
+            if data not in giorni:
+                giorni[data] = {'ore': [], 'min': ora['main']['temp_min'], 'max': ora['main']['temp_max']}
+            
+            giorni[data]['ore'].append(ora)
+            giorni[data]['min'] = min(giorni[data]['min'], ora['main']['temp_min'])
+            giorni[data]['max'] = max(giorni[data]['max'], ora['main']['temp_max'])
 
-    for day in forecast_data['forecast']['forecastday']:
-        processed_day = {
-            'date': day['date'],
-            'temp_min': round(day['day']['mintemp_c'], 1),
-            'temp_max': round(day['day']['maxtemp_c'], 1),
-            'condition': day['day']['condition']['text'],
-            'icon': day['day']['condition']['icon'],
-            'sunrise': format_time(day['astro']['sunrise']),
-            'sunset': format_time(day['astro']['sunset']),
-            'humidity': day['day']['avghumidity'],
-            'wind': round(day['day']['maxwind_kph']),
-            'hourly': []
+        risultato = {
+            'city': corrente.get('name', ''),
+            'country': corrente.get('sys', {}).get('country', ''),
+            'forecast': [{
+                'date': data,
+                'temp_min': round(giorno['min']),
+                'temp_max': round(giorno['max']),
+                'condition': giorno['ore'][0]['weather'][0]['description'],
+                'icon': f"http://openweathermap.org/img/wn/{giorno['ore'][0]['weather'][0]['icon']}@2x.png",
+                'hourly': [{
+                    'time': datetime.fromtimestamp(ora['dt']).strftime('%H:%M'),
+                    'temp': round(ora['main']['temp']),
+                    'precip': ora.get('rain', {}).get('3h', 0) or ora.get('snow', {}).get('3h', 0),
+                    'condition': ora['weather'][0]['description'],
+                    'icon': f"http://openweathermap.org/img/wn/{ora['weather'][0]['icon']}.png"
+                } for ora in giorno['ore'][:8]]
+            } for data, giorno in giorni.items()]
         }
-
-        for hour in day['hour']:
-            processed_day['hourly'].append({
-                'time': format_time(hour['time'], full=True),
-                'temp': round(hour['temp_c'], 1),
-                'precip': round(hour['precip_mm'], 1),
-                'condition': hour['condition']['text'],
-                'icon': hour['condition']['icon']
-            })
-
-        processed_data['forecast'].append(processed_day)
-
-    return jsonify(processed_data)
-
-# ==============================================
-# MAIN ROUTE
-# ==============================================
+        return jsonify(risultato)
+    except Exception as e:
+        return jsonify({'errore': str(e)}), 500
 
 @app.route('/')
-def homepage():
-    """Pagina principale dell'applicazione"""
+def home():
     return render_template('index.html')
 
-# ==============================================
-# AVVIO APPLICAZIONE
-# ==============================================
-
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=os.environ.get('DEBUG', 'False').lower() == 'true'
-    )
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)), debug=os.environ.get('DEBUG') == 'True')
